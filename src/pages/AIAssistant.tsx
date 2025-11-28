@@ -115,7 +115,13 @@ export const AIAssistant: React.FC = () => {
 
   return (
     <MainLayout>
-      <h1 className="mb-8">AI Medical Assistant</h1>
+      <h1
+        style={{
+          marginBottom: "32px",
+        }}
+      >
+        AI Medical Assistant
+      </h1>
 
       <div className="grid grid-cols-[280px_1fr] gap-6">
         {/* Suggested Prompts Sidebar */}

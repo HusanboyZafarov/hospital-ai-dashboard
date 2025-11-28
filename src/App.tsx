@@ -14,6 +14,7 @@ import { Diet } from "./pages/Diet";
 import { Activities } from "./pages/Activities";
 import { AIAssistant } from "./pages/AIAssistant";
 import { Appointments } from "./pages/Appointments";
+import { Surgeries } from "./pages/Surgeries";
 
 // For push
 
@@ -26,7 +27,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/patients" element={<PatientsList />} />
         <Route path="/patient/:id" element={<PatientProfile />} />
-        <Route path="/surgeries" element={<Dashboard />} />
+        <Route path="/surgeries" element={<Surgeries />} />
         <Route path="/records" element={<Dashboard />} />
         <Route path="/care-plans" element={<Dashboard />} />
         <Route path="/medications" element={<Medications />} />
