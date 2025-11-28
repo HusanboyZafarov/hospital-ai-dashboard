@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 
 export const SignIn: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,11 +27,11 @@ export const SignIn: React.FC = () => {
             </h1>
 
             <Input
-              label="Email"
-              type="email"
-              placeholder="your.email@hospital.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Username"
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
 
