@@ -1261,9 +1261,12 @@ const ActivitiesTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
               <Card
                 key={activity.id}
                 padding="16px"
-                className="h-[80px] hover:border-[#22C55E] transition-colors relative group"
+                className=" hover:border-[#22C55E] transition-colors relative group
+                
+                flex items-center justify-between
+                "
               >
-                <div className="flex items-start gap-2 h-full">
+                <div className="flex items-start gap-2">
                   <CheckCircle
                     size={16}
                     className="text-[#22C55E] shrink-0 mt-1"
@@ -1272,7 +1275,7 @@ const ActivitiesTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
                     {activity.name}
                   </span>
                 </div>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+                <div className=" opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
                     onClick={() => handleEditActivity(activity)}
                     className="p-1 rounded hover:bg-[#DCFCE7] transition-colors"
@@ -1312,15 +1315,18 @@ const ActivitiesTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
               <Card
                 key={activity.id}
                 padding="16px"
-                className="h-[80px] hover:border-[#EF4444] transition-colors relative group"
+                className="hover:border-[#EF4444] transition-colors relative group
+                
+                flex items-center justify-between
+                "
               >
-                <div className="flex items-start gap-2 h-full">
+                <div className="flex items-start gap-2">
                   <XCircle size={16} className="text-[#EF4444] shrink-0 mt-1" />
                   <span className="text-[14px] text-[#991B1B] flex-1">
                     {activity.name}
                   </span>
                 </div>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
                     onClick={() => handleEditActivity(activity)}
                     className="p-1 rounded hover:bg-[#FEE2E2] transition-colors"
@@ -1344,54 +1350,15 @@ const ActivitiesTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
         </div>
       </div>
 
-      <Card>
-        <h3 className="mb-4">AI Safety Checker</h3>
-        <p className="text-[#475569] mb-6">
-          Ask AI if an activity is safe for this patient's current condition.
-          The AI will analyze the activity against the patient's surgery type,
-          recovery stage, and current health status.
-        </p>
-        <div className="flex gap-4">
-          <Input
-            placeholder="E.g., Can I swim? Can I lift my grandchild?"
-            className="flex-1"
-            value={aiQuery}
-            onChange={(e) => setAiQuery(e.target.value)}
-          />
-          <Button
-            onClick={() =>
-              alert(`AI Analysis: ${aiQuery} - Safe with precautions`)
-            }
-          >
-            Check Safety
-          </Button>
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-[#E2E8F0]">
-          <h3 className="mb-4">Example Queries</h3>
-          <div className="flex flex-wrap gap-2">
-            {[
-              "Can I drive to the store?",
-              "Is it safe to go up and down stairs?",
-              "Can I work from home at my desk?",
-              "When can I return to yoga?",
-            ].map((query) => (
-              <button
-                key={query}
-                onClick={() => setAiQuery(query)}
-                className="px-3 py-2 rounded-lg border border-[#E2E8F0] text-[14px] text-[#475569] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors bg-white cursor-pointer"
-              >
-                {query}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
       {/* Activity Modal */}
       {showActivityModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <Card padding="24px" className="w-[95%] min-w-[1400px]">
+        <div
+          style={{
+            background: "#0003",
+          }}
+          className="fixed inset-0 flex items-center justify-center z-50"
+        >
+          <Card padding="24px" className="w-[95%] min-w-[1400px]" width="400px">
             <div className="flex items-center justify-between mb-6">
               <h2>{editingActivity ? "Edit Activity" : "Add New Activity"}</h2>
               <button
@@ -1595,9 +1562,6 @@ const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
   ];
 
   const [medicalFiles, setMedicalFiles] = useState<MedicalFile[]>(initialFiles);
-  const [showFileModal, setShowFileModal] = useState(false);
-  const [editingFile, setEditingFile] = useState<MedicalFile | null>(null);
-  const [fileForm, setFileForm] = useState({ name: "", date: "" });
 
   const handleAddMedication = () => {
     setEditingMedication(null);
@@ -1852,7 +1816,7 @@ const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
                 doctor={note.doctor}
                 note={note.note}
               />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 flex-nowrap whitespace-nowrap">
                 <button
                   onClick={() => {
                     setEditingNote(note);
@@ -1863,7 +1827,7 @@ const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
                     });
                     setShowNoteModal(true);
                   }}
-                  className="p-2 rounded-lg hover:bg-[#EFF6FF] transition-colors"
+                  className="p-2 rounded-lg hover:bg-[#EFF6FF] transition-colors shrink-0"
                   title="Edit"
                 >
                   <Edit size={18} className="text-[#2563EB]" />
@@ -1880,7 +1844,7 @@ const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
                       );
                     }
                   }}
-                  className="p-2 rounded-lg hover:bg-[#FEE2E2] transition-colors"
+                  className="p-2 rounded-lg hover:bg-[#FEE2E2] transition-colors shrink-0"
                   title="Delete"
                 >
                   <Trash2 size={18} className="text-[#EF4444]" />
@@ -1891,62 +1855,20 @@ const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
         </div>
       </Card>
 
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3>Medical Files</h3>
-          <Button
-            onClick={() => {
-              setEditingFile(null);
-              setFileForm({ name: "", date: "" });
-              setShowFileModal(true);
-            }}
-          >
-            <Plus size={18} className="inline mr-2" />
-            Add File
-          </Button>
-        </div>
-        <div className="grid grid-cols-4 gap-4">
-          {medicalFiles.map((file) => (
-            <div key={file.id} className="relative group">
-              <FileCard name={file.name} date={file.date} />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
-                <button
-                  onClick={() => {
-                    setEditingFile(file);
-                    setFileForm({ name: file.name, date: file.date });
-                    setShowFileModal(true);
-                  }}
-                  className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-[#EFF6FF] transition-colors"
-                  title="Edit"
-                >
-                  <Edit size={18} className="text-[#2563EB]" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this file?"
-                      )
-                    ) {
-                      setMedicalFiles(
-                        medicalFiles.filter((f) => f.id !== file.id)
-                      );
-                    }
-                  }}
-                  className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-[#FEE2E2] transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 size={18} className="text-[#EF4444]" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <MedicalFilesSection
+        medicalFiles={medicalFiles}
+        setMedicalFiles={setMedicalFiles}
+      />
 
       {/* Medication Modal */}
       {showMedicationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            width: "100%",
+          }}
+          className="fixed inset- flex items-center justify-center z-50"
+        >
           <Card
             padding="24px"
             className="w-[95%] min-w-[1400px] max-h-[90vh] overflow-y-auto"
@@ -2088,13 +2010,177 @@ const NoteItem: React.FC<{
   </div>
 );
 
-const FileCard: React.FC<{ name: string; date: string }> = ({ name, date }) => (
-  <div
-    className="p-4 rounded-lg border border-[#E2E8F0] hover:border-[#2563EB] transition-colors cursor-pointer"
-    style={{ height: "120px" }}
-  >
-    <FileText size={32} className="text-[#2563EB] mb-2" />
-    <div className="text-[#0F172A] mb-1">{name}</div>
-    <div className="text-[13px] text-[#475569]">{date}</div>
+// Medical Files Section Component
+const MedicalFilesSection: React.FC<{
+  medicalFiles: MedicalFile[];
+  setMedicalFiles: React.Dispatch<React.SetStateAction<MedicalFile[]>>;
+}> = ({ medicalFiles, setMedicalFiles }) => {
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [editingFile, setEditingFile] = useState<MedicalFile | null>(null);
+  const [fileForm, setFileForm] = useState({ name: "", date: "" });
+
+  const handleAddFile = () => {
+    setEditingFile(null);
+    setFileForm({ name: "", date: "" });
+    setShowFileModal(true);
+  };
+
+  const handleEditFile = (file: MedicalFile) => {
+    setEditingFile(file);
+    setFileForm({ name: file.name, date: file.date });
+    setShowFileModal(true);
+  };
+
+  const handleDeleteFile = (id: number) => {
+    if (window.confirm("Are you sure you want to delete this file?")) {
+      setMedicalFiles(medicalFiles.filter((f) => f.id !== id));
+    }
+  };
+
+  const handleSaveFile = () => {
+    if (!fileForm.name.trim() || !fileForm.date.trim()) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    if (editingFile) {
+      setMedicalFiles(
+        medicalFiles.map((f) =>
+          f.id === editingFile.id ? { ...fileForm, id: editingFile.id } : f
+        )
+      );
+    } else {
+      const newId = Math.max(...medicalFiles.map((f) => f.id), 0) + 1;
+      setMedicalFiles([...medicalFiles, { ...fileForm, id: newId }]);
+    }
+
+    setShowFileModal(false);
+    setEditingFile(null);
+    setFileForm({ name: "", date: "" });
+  };
+
+  return (
+    <>
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3>Medical Files</h3>
+          <Button onClick={handleAddFile}>
+            <Plus size={18} className="inline mr-2" />
+            Add File
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {medicalFiles.map((file) => (
+            <FileCard
+              key={file.id}
+              file={file}
+              onEdit={() => handleEditFile(file)}
+              onDelete={() => handleDeleteFile(file.id)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {/* File Modal */}
+      {showFileModal && (
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            width: "100%",
+          }}
+          className="fixed inset-0 flex items-center justify-center z-50"
+        >
+          <Card padding="24px" className="w-[95%] min-w-[1400px]">
+            <div className="flex items-center justify-between mb-6">
+              <h2>{editingFile ? "Edit File" : "Add New File"}</h2>
+              <button
+                onClick={() => {
+                  setShowFileModal(false);
+                  setEditingFile(null);
+                  setFileForm({ name: "", date: "" });
+                }}
+                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+              >
+                <X size={20} className="text-[#475569]" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[#475569] mb-2">File Name *</label>
+                <Input
+                  value={fileForm.name}
+                  onChange={(e) =>
+                    setFileForm({ ...fileForm, name: e.target.value })
+                  }
+                  placeholder="e.g., Pre-Op Assessment"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#475569] mb-2">Date *</label>
+                <Input
+                  value={fileForm.date}
+                  onChange={(e) =>
+                    setFileForm({ ...fileForm, date: e.target.value })
+                  }
+                  placeholder="e.g., Nov 14, 2025"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => {
+                  setShowFileModal(false);
+                  setEditingFile(null);
+                  setFileForm({ name: "", date: "" });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button fullWidth onClick={handleSaveFile}>
+                {editingFile ? "Update File" : "Add File"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </>
+  );
+};
+
+const FileCard: React.FC<{
+  file: MedicalFile;
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({ file, onEdit, onDelete }) => (
+  <div className="relative group">
+    <div
+      className="p-4 rounded-lg border border-[#E2E8F0] hover:border-[#2563EB] transition-colors cursor-pointer"
+      style={{ height: "120px" }}
+    >
+      <FileText size={32} className="text-[#2563EB] mb-2" />
+      <div className="text-[#0F172A] mb-1">{file.name}</div>
+      <div className="text-[13px] text-[#475569]">{file.date}</div>
+    </div>
+    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 flex-nowrap whitespace-nowrap">
+      <button
+        onClick={onEdit}
+        className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-[#EFF6FF] transition-colors shrink-0"
+        title="Edit"
+      >
+        <Edit size={18} className="text-[#2563EB]" />
+      </button>
+      <button
+        onClick={onDelete}
+        className="p-1 rounded bg-white border border-[#E2E8F0] hover:bg-[#FEE2E2] transition-colors shrink-0"
+        title="Delete"
+      >
+        <Trash2 size={18} className="text-[#EF4444]" />
+      </button>
+    </div>
   </div>
 );

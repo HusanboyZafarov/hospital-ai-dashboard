@@ -121,11 +121,10 @@ export const Dashboard: React.FC = () => {
 
       {/* AI Alerts Panel */}
       <Card padding="16px" className="mb-8" style={{ height: "220px" }}>
-        <h3 className="mb-4 px-2">AI Alerts</h3>
-        <div
-          className="flex flex-col gap-2 overflow-y-auto"
-          style={{ maxHeight: "140px" }}
-        >
+        <h3 className="mb-4 px-2" style={{ marginBottom: "20px" }}>
+          AI Alerts
+        </h3>
+        <div className="flex flex-col gap-2">
           {aiAlerts.map((alert, index) => (
             <div
               key={index}

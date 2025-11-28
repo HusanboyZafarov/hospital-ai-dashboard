@@ -1,6 +1,6 @@
-import React from 'react';
-import { Sidebar } from './Sidebar';
-import { Navbar } from './Navbar';
+import React from "react";
+import { Sidebar } from "./Sidebar";
+import { Navbar } from "./Navbar";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -13,7 +13,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div className="ml-[260px]">
         <Navbar />
         <main className="p-12">
-          <div className="max-w-[1440px] mx-auto">
+          <div
+            className="max-w-[1440px] mx-auto"
+            style={{
+              marginTop: "77px",
+            }}
+          >
             {children}
           </div>
         </main>
