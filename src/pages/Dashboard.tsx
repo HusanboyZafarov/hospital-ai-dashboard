@@ -6,7 +6,6 @@ import {
   Users,
   Activity,
   AlertTriangle,
-  Calendar,
   CheckCircle,
   Clock,
   XCircle,
