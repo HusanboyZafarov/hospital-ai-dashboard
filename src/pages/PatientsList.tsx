@@ -7,11 +7,13 @@ import { Card } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, X, Edit, Trash2, Loader2 } from "lucide-react";
 import patientsService from "../service/patients";
+import surgeriesService from "../service/surgeries";
 import {
   Patient as APIPatient,
   CreatePatientRequest,
   Gender,
   PatientStatus,
+  Surgery,
 } from "../types/patient";
 
 // API response structure for list endpoint (simplified)
@@ -92,6 +94,8 @@ export const PatientsList: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [surgeries, setSurgeries] = useState<Surgery[]>([]);
+  const [isLoadingSurgeries, setIsLoadingSurgeries] = useState(false);
   const [patientForm, setPatientForm] = useState<CreatePatientRequest>({
     full_name: "",
     age: 0,
@@ -123,6 +127,27 @@ export const PatientsList: React.FC = () => {
 
     fetchPatients();
   }, []);
+
+  // Fetch surgeries when modal opens
+  useEffect(() => {
+    const fetchSurgeries = async () => {
+      if (showModal) {
+        setIsLoadingSurgeries(true);
+        try {
+          const apiSurgeries = await surgeriesService.getSurgeries();
+          setSurgeries(apiSurgeries);
+        } catch (err: any) {
+          console.error("Failed to fetch surgeries:", err);
+          // Don't show error to user, just log it
+          setSurgeries([]);
+        } finally {
+          setIsLoadingSurgeries(false);
+        }
+      }
+    };
+
+    fetchSurgeries();
+  }, [showModal]);
 
   const getRiskBadge = (risk: string) => {
     if (risk === "High") return "error";
@@ -600,28 +625,45 @@ export const PatientsList: React.FC = () => {
 
                   <div>
                     <label className="block text-[#475569] mb-2">
-                      Surgery ID (Optional)
+                      Surgery (Optional)
                     </label>
-                    <Input
-                      type="number"
-                      value={patientForm.surgery_id || ""}
-                      onChange={(e) => {
-                        const value = e.target.value.trim();
-                        setPatientForm({
-                          ...patientForm,
-                          surgery_id:
-                            value &&
-                            !isNaN(parseInt(value)) &&
-                            parseInt(value) > 0
-                              ? parseInt(value)
-                              : null,
-                        });
-                      }}
-                      placeholder="e.g., 1"
-                    />
+                    {isLoadingSurgeries ? (
+                      <div className="flex items-center gap-2 py-3">
+                        <Loader2
+                          size={16}
+                          className="animate-spin text-[#2563EB]"
+                        />
+                        <span className="text-[#475569] text-[14px]">
+                          Loading surgeries...
+                        </span>
+                      </div>
+                    ) : (
+                      <select
+                        value={patientForm.surgery_id || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPatientForm({
+                            ...patientForm,
+                            surgery_id:
+                              value && value !== "" ? parseInt(value) : null,
+                          });
+                        }}
+                        className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                      >
+                        <option value="">No surgery assigned</option>
+                        {surgeries.map((surgery) => (
+                          <option key={surgery.id} value={surgery.id}>
+                            {surgery.name} ({surgery.type}) -{" "}
+                            {surgery.risk_level.charAt(0).toUpperCase() +
+                              surgery.risk_level.slice(1)}{" "}
+                            Risk
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <p className="text-[12px] text-[#475569] mt-1">
-                      Leave empty if no surgery assigned. Surgery must exist in
-                      the system.
+                      Select a surgery from the list or leave empty if no
+                      surgery assigned.
                     </p>
                   </div>
                 </div>
