@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Edit, Trash2 } from "lucide-react";
 
 const patientsData = [
   {
@@ -97,6 +97,7 @@ export const PatientsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [patients, setPatients] = useState<Patient[]>(patientsData);
   const [showModal, setShowModal] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({
     name: "",
     phone: "",
@@ -119,15 +120,29 @@ export const PatientsList: React.FC = () => {
     return "neutral";
   };
 
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.surgery.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPatients = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase().trim();
+    if (!searchLower) return patients; // Show all if search is empty
+
+    // Remove formatting from phone for better search
+    const normalizePhone = (phone: string) => phone.replace(/[^\d]/g, "");
+    const searchPhone = normalizePhone(searchTerm);
+
+    return patients.filter((patient) => {
+      return (
+        patient.name.toLowerCase().includes(searchLower) ||
+        patient.phone.toLowerCase().includes(searchLower) ||
+        normalizePhone(patient.phone).includes(searchPhone) ||
+        patient.doctor.toLowerCase().includes(searchLower) ||
+        patient.surgery.toLowerCase().includes(searchLower) ||
+        patient.status.toLowerCase().includes(searchLower) ||
+        patient.risk.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [patients, searchTerm]);
 
   const handleAddPatient = () => {
+    setEditingPatient(null);
     setPatientForm({
       name: "",
       phone: "",
@@ -137,6 +152,25 @@ export const PatientsList: React.FC = () => {
       status: "Pre-Op",
     });
     setShowModal(true);
+  };
+
+  const handleEditPatient = (patient: Patient) => {
+    setEditingPatient(patient);
+    setPatientForm({
+      name: patient.name,
+      phone: patient.phone,
+      doctor: patient.doctor,
+      surgery: patient.surgery,
+      risk: patient.risk,
+      status: patient.status,
+    });
+    setShowModal(true);
+  };
+
+  const handleDeletePatient = (id: number) => {
+    if (window.confirm("Are you sure you want to delete this patient?")) {
+      setPatients(patients.filter((p) => p.id !== id));
+    }
   };
 
   const handleSavePatient = () => {
@@ -150,9 +184,23 @@ export const PatientsList: React.FC = () => {
       return;
     }
 
-    const newId = Math.max(...patients.map((p) => p.id), 0) + 1;
-    setPatients([...patients, { ...patientForm, id: newId }]);
+    if (editingPatient) {
+      // Update existing patient
+      setPatients(
+        patients.map((p) =>
+          p.id === editingPatient.id
+            ? { ...patientForm, id: editingPatient.id }
+            : p
+        )
+      );
+    } else {
+      // Add new patient
+      const newId = Math.max(...patients.map((p) => p.id), 0) + 1;
+      setPatients([...patients, { ...patientForm, id: newId }]);
+    }
+
     setShowModal(false);
+    setEditingPatient(null);
     setPatientForm({
       name: "",
       phone: "",
@@ -220,37 +268,66 @@ export const PatientsList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredPatients.map((patient) => (
-              <tr
-                key={patient.id}
-                className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
-                style={{ height: "64px" }}
-              >
-                <td className="px-6 py-4 text-[#0F172A]">{patient.name}</td>
-                <td className="px-6 py-4 text-[#475569]">{patient.phone}</td>
-                <td className="px-6 py-4 text-[#475569]">{patient.doctor}</td>
-                <td className="px-6 py-4 text-[#0F172A]">{patient.surgery}</td>
-                <td className="px-6 py-4">
-                  <Badge variant={getRiskBadge(patient.risk)}>
-                    {patient.risk}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant={getStatusBadge(patient.status)}>
-                    {patient.status}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate(`/patient/${patient.id}`)}
-                    className="py-2"
-                  >
-                    View Profile
-                  </Button>
+            {filteredPatients.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-6 py-8 text-center text-[#475569]"
+                >
+                  No patients found matching "{searchTerm}"
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredPatients.map((patient) => (
+                <tr
+                  key={patient.id}
+                  className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
+                  style={{ height: "64px" }}
+                >
+                  <td className="px-6 py-4 text-[#0F172A]">{patient.name}</td>
+                  <td className="px-6 py-4 text-[#475569]">{patient.phone}</td>
+                  <td className="px-6 py-4 text-[#475569]">{patient.doctor}</td>
+                  <td className="px-6 py-4 text-[#0F172A]">
+                    {patient.surgery}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant={getRiskBadge(patient.risk)}>
+                      {patient.risk}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant={getStatusBadge(patient.status)}>
+                      {patient.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/patient/${patient.id}`)}
+                        className="py-2"
+                      >
+                        View Profile
+                      </Button>
+                      <button
+                        onClick={() => handleEditPatient(patient)}
+                        className="p-2 rounded-lg border border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] transition-colors cursor-pointer"
+                        title="Edit"
+                      >
+                        <Edit size={20} className="text-[#2563EB]" />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePatient(patient.id)}
+                        className="p-2 rounded-lg border border-[#E2E8F0] hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
+                        title="Delete"
+                      >
+                        <Trash2 size={20} className="text-[#EF4444]" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -269,10 +346,11 @@ export const PatientsList: React.FC = () => {
             className="w-[95%] min-w-[1400px] max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2>Add New Patient</h2>
+              <h2>{editingPatient ? "Edit Patient" : "Add New Patient"}</h2>
               <button
                 onClick={() => {
                   setShowModal(false);
+                  setEditingPatient(null);
                   setPatientForm({
                     name: "",
                     phone: "",
@@ -412,6 +490,7 @@ export const PatientsList: React.FC = () => {
                 fullWidth
                 onClick={() => {
                   setShowModal(false);
+                  setEditingPatient(null);
                   setPatientForm({
                     name: "",
                     phone: "",
@@ -425,7 +504,7 @@ export const PatientsList: React.FC = () => {
                 Cancel
               </Button>
               <Button fullWidth onClick={handleSavePatient}>
-                Add Patient
+                {editingPatient ? "Update Patient" : "Add Patient"}
               </Button>
             </div>
           </Card>

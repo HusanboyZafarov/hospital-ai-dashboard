@@ -214,9 +214,22 @@ const tabs = [
 ];
 
 export const Surgeries: React.FC = () => {
+  const [surgeries, setSurgeries] = useState<Surgery[]>(surgeriesData);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSurgery, setSelectedSurgery] = useState<Surgery | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showNewSurgeryModal, setShowNewSurgeryModal] = useState(false);
+  const [surgeryForm, setSurgeryForm] = useState<Omit<Surgery, "id">>({
+    name: "",
+    category: "",
+    patientName: "",
+    surgeon: "",
+    date: "",
+    status: "Scheduled",
+    riskLevel: "Low",
+    description: "",
+    expectedDuration: "",
+  });
 
   const getStatusBadge = (status: string) => {
     if (status === "Completed") return "success";
@@ -231,12 +244,57 @@ export const Surgeries: React.FC = () => {
     return "success";
   };
 
-  const filteredSurgeries = surgeriesData.filter(
+  const filteredSurgeries = surgeries.filter(
     (surgery) =>
       surgery.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       surgery.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       surgery.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAddSurgery = () => {
+    setSurgeryForm({
+      name: "",
+      category: "",
+      patientName: "",
+      surgeon: "",
+      date: "",
+      status: "Scheduled",
+      riskLevel: "Low",
+      description: "",
+      expectedDuration: "",
+    });
+    setShowNewSurgeryModal(true);
+  };
+
+  const handleSaveSurgery = () => {
+    if (
+      !surgeryForm.name.trim() ||
+      !surgeryForm.category.trim() ||
+      !surgeryForm.patientName.trim() ||
+      !surgeryForm.surgeon.trim() ||
+      !surgeryForm.date.trim() ||
+      !surgeryForm.description.trim() ||
+      !surgeryForm.expectedDuration.trim()
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const newId = Math.max(...surgeries.map((s) => s.id), 0) + 1;
+    setSurgeries([...surgeries, { ...surgeryForm, id: newId }]);
+    setShowNewSurgeryModal(false);
+    setSurgeryForm({
+      name: "",
+      category: "",
+      patientName: "",
+      surgeon: "",
+      date: "",
+      status: "Scheduled",
+      riskLevel: "Low",
+      description: "",
+      expectedDuration: "",
+    });
+  };
 
   const handleViewDetails = (surgery: Surgery) => {
     setSelectedSurgery(surgery);
@@ -295,7 +353,7 @@ export const Surgeries: React.FC = () => {
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
         <h1>Surgeries</h1>
-        <Button>+ New Surgery</Button>
+        <Button onClick={handleAddSurgery}>+ New Surgery</Button>
       </div>
 
       {/* Search */}
@@ -361,6 +419,244 @@ export const Surgeries: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* New Surgery Modal */}
+      {showNewSurgeryModal && (
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            width: "100%",
+          }}
+          className="fixed inset-0 flex items-center justify-center z-50"
+        >
+          <Card
+            padding="24px"
+            className="w-[95%] min-w-[1400px] max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2>Add New Surgery</h2>
+              <button
+                onClick={() => {
+                  setShowNewSurgeryModal(false);
+                  setSurgeryForm({
+                    name: "",
+                    category: "",
+                    patientName: "",
+                    surgeon: "",
+                    date: "",
+                    status: "Scheduled",
+                    riskLevel: "Low",
+                    description: "",
+                    expectedDuration: "",
+                  });
+                }}
+                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+              >
+                <X size={20} className="text-[#475569]" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Surgery Name *
+                  </label>
+                  <Input
+                    value={surgeryForm.name}
+                    onChange={(e) =>
+                      setSurgeryForm({ ...surgeryForm, name: e.target.value })
+                    }
+                    placeholder="e.g., Total Knee Replacement"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Category *
+                  </label>
+                  <Input
+                    value={surgeryForm.category}
+                    onChange={(e) =>
+                      setSurgeryForm({
+                        ...surgeryForm,
+                        category: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Orthopedic"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Patient Name *
+                  </label>
+                  <Input
+                    value={surgeryForm.patientName}
+                    onChange={(e) =>
+                      setSurgeryForm({
+                        ...surgeryForm,
+                        patientName: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., John Martinez"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">Surgeon *</label>
+                  <Input
+                    value={surgeryForm.surgeon}
+                    onChange={(e) =>
+                      setSurgeryForm({
+                        ...surgeryForm,
+                        surgeon: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Dr. Michael Chen"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">Date *</label>
+                  <Input
+                    value={surgeryForm.date}
+                    onChange={(e) =>
+                      setSurgeryForm({ ...surgeryForm, date: e.target.value })
+                    }
+                    placeholder="e.g., November 16, 2025 at 9:00 AM"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Expected Duration *
+                  </label>
+                  <Input
+                    value={surgeryForm.expectedDuration}
+                    onChange={(e) =>
+                      setSurgeryForm({
+                        ...surgeryForm,
+                        expectedDuration: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 2-3 hours"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">Status *</label>
+                  <select
+                    value={surgeryForm.status}
+                    onChange={(e) =>
+                      setSurgeryForm({
+                        ...surgeryForm,
+                        status: e.target.value as Surgery["status"],
+                      })
+                    }
+                    className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                  >
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Risk Level *
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() =>
+                        setSurgeryForm({ ...surgeryForm, riskLevel: "Low" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        surgeryForm.riskLevel === "Low"
+                          ? "border-[#22C55E] bg-[#DCFCE7] text-[#166534]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      Low
+                    </button>
+                    <button
+                      onClick={() =>
+                        setSurgeryForm({ ...surgeryForm, riskLevel: "Medium" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        surgeryForm.riskLevel === "Medium"
+                          ? "border-[#F59E0B] bg-[#FEF3C7] text-[#92400E]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      Medium
+                    </button>
+                    <button
+                      onClick={() =>
+                        setSurgeryForm({ ...surgeryForm, riskLevel: "High" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        surgeryForm.riskLevel === "High"
+                          ? "border-[#EF4444] bg-[#FEE2E2] text-[#991B1B]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      High
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#475569] mb-2">
+                  Description *
+                </label>
+                <textarea
+                  value={surgeryForm.description}
+                  onChange={(e) =>
+                    setSurgeryForm({
+                      ...surgeryForm,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., Complete replacement of damaged knee joint with prosthetic implant..."
+                  className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => {
+                  setShowNewSurgeryModal(false);
+                  setSurgeryForm({
+                    name: "",
+                    category: "",
+                    patientName: "",
+                    surgeon: "",
+                    date: "",
+                    status: "Scheduled",
+                    riskLevel: "Low",
+                    description: "",
+                    expectedDuration: "",
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button fullWidth onClick={handleSaveSurgery}>
+                Add Surgery
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </MainLayout>
   );
 };
