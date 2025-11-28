@@ -3,15 +3,31 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { useAuth } from "../contexts/AuthContext";
 
 export const SignIn: React.FC = () => {
   const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/dashboard");
+    setError("");
+
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password");
+      return;
+    }
+
+    try {
+      await login(username, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Login failed. Please try again.");
+      console.error(err);
+    }
   };
 
   return (
@@ -44,8 +60,19 @@ export const SignIn: React.FC = () => {
               required
             />
 
-            <Button type="submit" fullWidth style={{ height: "48px" }}>
-              Sign In
+            {error && (
+              <div className="text-[#EF4444] text-[14px] text-center">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              fullWidth
+              style={{ height: "48px" }}
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </Card>

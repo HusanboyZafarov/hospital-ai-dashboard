@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { SignIn } from "./pages/SignIn";
 import { Dashboard } from "./pages/Dashboard";
 import { PatientsList } from "./pages/PatientsList";
@@ -16,27 +17,138 @@ import { AIAssistant } from "./pages/AIAssistant";
 import { Appointments } from "./pages/Appointments";
 import { Surgeries } from "./pages/Surgeries";
 
-// For push
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({
+  children,
+}) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-[#475569]">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  return children;
+};
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/signin" replace />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients"
+        element={
+          <ProtectedRoute>
+            <PatientsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patient/:id"
+        element={
+          <ProtectedRoute>
+            <PatientProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/surgeries"
+        element={
+          <ProtectedRoute>
+            <Surgeries />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/records"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/care-plans"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/medications"
+        element={
+          <ProtectedRoute>
+            <Medications />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/diet"
+        element={
+          <ProtectedRoute>
+            <Diet />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/activities"
+        element={
+          <ProtectedRoute>
+            <Activities />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-assistant"
+        element={
+          <ProtectedRoute>
+            <AIAssistant />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/appointments"
+        element={
+          <ProtectedRoute>
+            <Appointments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/patients" element={<PatientsList />} />
-        <Route path="/patient/:id" element={<PatientProfile />} />
-        <Route path="/surgeries" element={<Surgeries />} />
-        <Route path="/records" element={<Dashboard />} />
-        <Route path="/care-plans" element={<Dashboard />} />
-        <Route path="/medications" element={<Medications />} />
-        <Route path="/diet" element={<Diet />} />
-        <Route path="/activities" element={<Activities />} />
-        <Route path="/ai-assistant" element={<AIAssistant />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/settings" element={<Dashboard />} />
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </Router>
   );
 }
