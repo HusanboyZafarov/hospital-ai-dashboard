@@ -7,7 +7,12 @@ import { Card } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, X, Edit, Trash2, Loader2 } from "lucide-react";
 import patientsService from "../service/patients";
-import { Patient as APIPatient } from "../types/patient";
+import {
+  Patient as APIPatient,
+  CreatePatientRequest,
+  Gender,
+  PatientStatus,
+} from "../types/patient";
 
 // API response structure for list endpoint (simplified)
 interface PatientListItem {
@@ -87,22 +92,16 @@ export const PatientsList: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [patientForm, setPatientForm] = useState({
+  const [patientForm, setPatientForm] = useState<CreatePatientRequest>({
     full_name: "",
     age: 0,
-    gender: "Male" as "Male" | "Female" | "Other",
+    gender: "male",
     phone: "",
     assigned_doctor: "",
     admitted_at: new Date().toISOString().split("T")[0],
     ward: "",
-    status: "pre_op" as
-      | "pre_op"
-      | "in_surgery"
-      | "post_op"
-      | "recovery"
-      | "stable"
-      | "discharged",
-    surgery_id: null as number | null,
+    status: "pre_op",
+    surgery_id: null,
   });
 
   // Fetch patients on mount
@@ -164,7 +163,7 @@ export const PatientsList: React.FC = () => {
     setPatientForm({
       full_name: "",
       age: 0,
-      gender: "Male",
+      gender: "male",
       phone: "",
       assigned_doctor: "",
       admitted_at: new Date().toISOString().split("T")[0],
@@ -226,11 +225,20 @@ export const PatientsList: React.FC = () => {
 
     setIsSaving(true);
     try {
+      // Prepare data for API - ensure surgery_id is null if empty/invalid
+      const patientData: CreatePatientRequest = {
+        ...patientForm,
+        surgery_id:
+          patientForm.surgery_id && patientForm.surgery_id > 0
+            ? patientForm.surgery_id
+            : null,
+      };
+
       if (editingPatient) {
         // Update existing patient
         const updatedPatient = await patientsService.updatePatient(
           editingPatient.id,
-          patientForm
+          patientData
         );
         const mappedPatient = mapAPIPatientToComponent(updatedPatient);
         setPatients(
@@ -238,7 +246,7 @@ export const PatientsList: React.FC = () => {
         );
       } else {
         // Add new patient
-        const newPatient = await patientsService.postPatient(patientForm);
+        const newPatient = await patientsService.postPatient(patientData);
         const mappedPatient = mapAPIPatientToComponent(newPatient);
         setPatients([...patients, mappedPatient]);
       }
@@ -248,7 +256,7 @@ export const PatientsList: React.FC = () => {
       setPatientForm({
         full_name: "",
         age: 0,
-        gender: "Male",
+        gender: "male",
         phone: "",
         assigned_doctor: "",
         admitted_at: new Date().toISOString().split("T")[0],
@@ -432,7 +440,7 @@ export const PatientsList: React.FC = () => {
                       setPatientForm({
                         full_name: "",
                         age: 0,
-                        gender: "Male",
+                        gender: "male",
                         phone: "",
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],
@@ -505,17 +513,14 @@ export const PatientsList: React.FC = () => {
                         onChange={(e) =>
                           setPatientForm({
                             ...patientForm,
-                            gender: e.target.value as
-                              | "Male"
-                              | "Female"
-                              | "Other",
+                            gender: e.target.value as Gender,
                           })
                         }
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
                       >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
                       </select>
                     </div>
                   </div>
@@ -578,13 +583,7 @@ export const PatientsList: React.FC = () => {
                         onChange={(e) =>
                           setPatientForm({
                             ...patientForm,
-                            status: e.target.value as
-                              | "pre_op"
-                              | "in_surgery"
-                              | "post_op"
-                              | "recovery"
-                              | "stable"
-                              | "discharged",
+                            status: e.target.value as PatientStatus,
                           })
                         }
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
@@ -606,16 +605,24 @@ export const PatientsList: React.FC = () => {
                     <Input
                       type="number"
                       value={patientForm.surgery_id || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value.trim();
                         setPatientForm({
                           ...patientForm,
-                          surgery_id: e.target.value
-                            ? parseInt(e.target.value)
-                            : null,
-                        })
-                      }
+                          surgery_id:
+                            value &&
+                            !isNaN(parseInt(value)) &&
+                            parseInt(value) > 0
+                              ? parseInt(value)
+                              : null,
+                        });
+                      }}
                       placeholder="e.g., 1"
                     />
+                    <p className="text-[12px] text-[#475569] mt-1">
+                      Leave empty if no surgery assigned. Surgery must exist in
+                      the system.
+                    </p>
                   </div>
                 </div>
 
@@ -629,7 +636,7 @@ export const PatientsList: React.FC = () => {
                       setPatientForm({
                         full_name: "",
                         age: 0,
-                        gender: "Male",
+                        gender: "male",
                         phone: "",
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],

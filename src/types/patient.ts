@@ -1,4 +1,4 @@
-export type Gender = "Male" | "Female" | "Other";
+export type Gender = "male" | "female" | "other";
 
 export type PatientStatus =
   | "pre_op"

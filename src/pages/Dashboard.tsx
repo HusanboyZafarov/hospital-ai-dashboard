@@ -209,7 +209,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* AI Alerts Panel */}
-          <Card padding="16px" className="mb-8" style={{ height: "220px" }}>
+          <Card padding="16px" className="mb-8">
             <h3 className="mb-4 px-2" style={{ marginBottom: "20px" }}>
               AI Alerts
             </h3>
