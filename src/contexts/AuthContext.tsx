@@ -6,6 +6,8 @@ import React, {
   ReactNode,
 } from "react";
 import { User, AuthResponse } from "../types/user";
+import authService from "../service/auth";
+import { setSession, ACCESS_TOKEN } from "../jwt";
 
 interface AuthContextType {
   user: User | null;
@@ -26,44 +28,76 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Load user from localStorage on mount and verify token
   useEffect(() => {
-    const storedAuth = localStorage.getItem(STORAGE_KEY);
-    if (storedAuth) {
-      try {
-        const authData = JSON.parse(storedAuth);
-        setUser(authData.user);
-      } catch (error) {
-        console.error("Error loading auth data:", error);
-        localStorage.removeItem(STORAGE_KEY);
+    const loadUser = async () => {
+      const storedAuth = localStorage.getItem(STORAGE_KEY);
+      const accessToken = localStorage.getItem(ACCESS_TOKEN);
+
+      if (storedAuth && accessToken) {
+        try {
+          const authData = JSON.parse(storedAuth);
+          // Try to fetch current user from API to verify token
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setUser(currentUser);
+            // Update stored user data
+            authData.user = currentUser;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
+          } catch (error) {
+            // If API call fails, use stored user
+            setUser(authData.user);
+          }
+        } catch (error) {
+          console.error("Error loading auth data:", error);
+          localStorage.removeItem(STORAGE_KEY);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    loadUser();
   }, []);
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - replace with actual API call later
-      // For now, create a mock user based on username
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
-        username: username,
-        email: `${username}@hospital.com`,
-        name: username.charAt(0).toUpperCase() + username.slice(1),
-        role: username === "admin" ? "admin" : "doctor",
-        department: "General Medicine",
-        permissions: username === "admin" ? ["all"] : ["read", "write"],
+      // Call API login
+      const response: AuthResponse = await authService.login(
+        username,
+        password
+      );
+
+      // Extract tokens - API returns "access" and "refresh"
+      const accessToken =
+        response.access || response.accessToken || response.token;
+      const refreshToken = response.refresh || response.refreshToken;
+
+      if (!accessToken || !refreshToken) {
+        throw new Error("Invalid response: missing tokens");
+      }
+
+      // Save tokens using jwt setSession
+      setSession({
+        accessToken,
+        refreshToken,
+      });
+
+      // Use user from login response (API returns user directly)
+      const userData: User = {
+        ...response.user,
+        name: response.user.name || response.user.username, // Fallback to username if name not provided
       };
 
+      // Store auth data in localStorage
       const authData: AuthResponse = {
-        user: mockUser,
-        token: `mock_token_${Date.now()}`,
+        user: userData,
+        access: accessToken,
+        refresh: refreshToken,
       };
 
-      // Store in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
-      setUser(mockUser);
+      setUser(userData);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -73,6 +107,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const logout = () => {
+    // Clear tokens
+    setSession({});
+    // Clear stored auth data
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   };

@@ -24,9 +24,43 @@ export const SignIn: React.FC = () => {
     try {
       await login(username, password);
       navigate("/dashboard");
-    } catch (err) {
-      setError("Login failed. Please try again.");
-      console.error(err);
+    } catch (err: any) {
+      // Handle different error types
+      if (err?.response) {
+        // API error response
+        const status = err.response.status;
+        const errorMessage =
+          err.response.data?.message ||
+          err.response.data?.error ||
+          err.response.data?.detail;
+
+        if (status === 401) {
+          setError("Invalid username or password. Please try again.");
+        } else if (status === 400) {
+          setError(
+            errorMessage || "Invalid request. Please check your credentials."
+          );
+        } else if (status === 403) {
+          setError("Access denied. Please contact your administrator.");
+        } else if (status === 404) {
+          setError("Service not found. Please try again later.");
+        } else if (status >= 500) {
+          setError("Server error. Please try again later.");
+        } else {
+          setError(errorMessage || "Login failed. Please try again.");
+        }
+      } else if (err?.request) {
+        // Network error - request was made but no response received
+        setError("Network error. Please check your connection and try again.");
+      } else if (err?.message) {
+        // Other error with message
+        setError(err.message);
+      } else {
+        // Unknown error
+        setError("An unexpected error occurred. Please try again.");
+      }
+
+      console.error("Login error:", err);
     }
   };
 

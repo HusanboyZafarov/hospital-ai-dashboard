@@ -191,58 +191,52 @@ class ApiService {
 
     try {
       const { data: response } = await axios.post<{
-        accessToken: string;
-        refreshToken: string;
+        access?: string; // API returns "access"
+        refresh?: string; // API returns "refresh"
+        accessToken?: string; // Legacy support
+        token?: string; // Legacy support
+        refreshToken?: string; // Legacy support
         user?: {
-          id?: string;
-          fullName?: string;
-          phone_number?: string;
-          phoneNumber?: string;
-          role?: string;
-          partnerId?: string;
-          limit?: number;
-        };
-        partner?: {
-          id?: string;
-          fullName?: string;
+          id?: number;
+          username?: string;
           email?: string;
-          subscriptionType?: string;
-          credits?: number;
-          licenseSeats?: number;
-          licenseExpiresAt?: string;
+          role?: string;
         };
       }>(
-        `${this._baseConfig.https}auth/refresh`,
+        `${this._baseConfig.https}hospitals/auth/refresh/`,
         {
-          refreshToken,
+          refresh: refreshToken, // API expects "refresh" in body
         },
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${refreshToken}`,
           },
         }
       );
-      const {
-        accessToken,
-        refreshToken: nextRefreshToken,
-        user,
-        partner,
-      } = response;
+
+      // Extract tokens - API returns "access" and "refresh"
+      const accessToken =
+        response.access || response.accessToken || response.token;
+      const nextRefreshToken = response.refresh || response.refreshToken;
+
+      if (!accessToken) {
+        throw new Error("No access token in refresh response");
+      }
 
       this.setSession({
         accessToken,
-        refreshToken: nextRefreshToken,
+        refreshToken: nextRefreshToken || refreshToken,
       });
-      // Return full response with user, partner, and tokens
+
+      // Return full response with user and tokens
       return {
-        user,
-        partner,
+        user: response.user,
         accessToken,
-        refreshToken: nextRefreshToken,
+        refreshToken: nextRefreshToken || refreshToken,
       };
     } catch (error) {
       console.error("Refresh token failed:", error);
+      this.setSession({});
       throw error;
     }
   }

@@ -1,7 +1,15 @@
 import React from "react";
-import { User } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const Navbar: React.FC = () => {
+  const { user } = useAuth();
+
+  const displayName = user?.name || user?.username || "User";
+  const displayRole = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : "User";
+
   return (
     <div
       className=" bg-white border-b border-[#E2E8F0] flex items-center justify-end px-12"
@@ -16,11 +24,11 @@ export const Navbar: React.FC = () => {
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center">
-          <User size={20} className="text-[#2563EB]" />
+          <UserIcon size={20} className="text-[#2563EB]" />
         </div>
         <div className="text-right">
-          <div className="text-[#0F172A]">Dr. Sarah Johnson</div>
-          <div className="text-[#475569] text-[13px]">Administrator</div>
+          <div className="text-[#0F172A]">{displayName}</div>
+          <div className="text-[#475569] text-[13px]">{displayRole}</div>
         </div>
       </div>
     </div>
