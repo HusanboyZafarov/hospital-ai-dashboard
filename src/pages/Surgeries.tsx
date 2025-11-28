@@ -326,7 +326,6 @@ export const Surgeries: React.FC = () => {
                 Surgery Name
               </th>
               <th className="text-left px-6 py-4 text-[#475569]">Category</th>
-              <th className="text-left px-6 py-4 text-[#475569]">Status</th>
               <th className="text-left px-6 py-4 text-[#475569]">Risk Level</th>
               <th className="text-left px-6 py-4 text-[#475569]">Action</th>
             </tr>
@@ -343,11 +342,6 @@ export const Surgeries: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 text-[#475569]">{surgery.category}</td>
 
-                <td className="px-6 py-4">
-                  <Badge variant={getStatusBadge(surgery.status)}>
-                    {surgery.status}
-                  </Badge>
-                </td>
                 <td className="px-6 py-4">
                   <Badge variant={getRiskBadge(surgery.riskLevel)}>
                     {surgery.riskLevel}

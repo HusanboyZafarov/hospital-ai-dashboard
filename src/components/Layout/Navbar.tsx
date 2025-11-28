@@ -11,7 +11,7 @@ export const Navbar: React.FC = () => {
         position: "fixed",
         left: "260px",
         width: "calc(100% - 260px)",
-        zIndex: "1000",
+        zIndex: "49",
       }}
     >
       <div className="flex items-center gap-3">

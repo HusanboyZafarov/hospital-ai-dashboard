@@ -3,8 +3,9 @@ import { MainLayout } from "../components/Layout/MainLayout";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, X } from "lucide-react";
 
 const patientsData = [
   {
@@ -81,9 +82,29 @@ const patientsData = [
   },
 ];
 
+interface Patient {
+  id: number;
+  name: string;
+  phone: string;
+  doctor: string;
+  surgery: string;
+  risk: "High" | "Medium" | "Low";
+  status: string;
+}
+
 export const PatientsList: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<Patient[]>(patientsData);
+  const [showModal, setShowModal] = useState(false);
+  const [patientForm, setPatientForm] = useState({
+    name: "",
+    phone: "",
+    doctor: "",
+    surgery: "",
+    risk: "Low" as "High" | "Medium" | "Low",
+    status: "Pre-Op",
+  });
 
   const getRiskBadge = (risk: string) => {
     if (risk === "High") return "error";
@@ -98,11 +119,55 @@ export const PatientsList: React.FC = () => {
     return "neutral";
   };
 
+  const filteredPatients = patients.filter(
+    (patient) =>
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.surgery.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddPatient = () => {
+    setPatientForm({
+      name: "",
+      phone: "",
+      doctor: "",
+      surgery: "",
+      risk: "Low",
+      status: "Pre-Op",
+    });
+    setShowModal(true);
+  };
+
+  const handleSavePatient = () => {
+    if (
+      !patientForm.name.trim() ||
+      !patientForm.phone.trim() ||
+      !patientForm.doctor.trim() ||
+      !patientForm.surgery.trim()
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const newId = Math.max(...patients.map((p) => p.id), 0) + 1;
+    setPatients([...patients, { ...patientForm, id: newId }]);
+    setShowModal(false);
+    setPatientForm({
+      name: "",
+      phone: "",
+      doctor: "",
+      surgery: "",
+      risk: "Low",
+      status: "Pre-Op",
+    });
+  };
+
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
         <h1>Patients</h1>
-        <Button>+ New Patient</Button>
+        <Button onClick={handleAddPatient}>+ New Patient</Button>
       </div>
 
       {/* Search and Filters */}
@@ -155,7 +220,7 @@ export const PatientsList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {patientsData.map((patient) => (
+            {filteredPatients.map((patient) => (
               <tr
                 key={patient.id}
                 className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
@@ -189,6 +254,183 @@ export const PatientsList: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Add Patient Modal */}
+      {showModal && (
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            width: "100%",
+          }}
+          className="fixed inset-0 flex items-center justify-center z-50"
+        >
+          <Card
+            padding="24px"
+            className="w-[95%] min-w-[1400px] max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2>Add New Patient</h2>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setPatientForm({
+                    name: "",
+                    phone: "",
+                    doctor: "",
+                    surgery: "",
+                    risk: "Low",
+                    status: "Pre-Op",
+                  });
+                }}
+                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+              >
+                <X size={20} className="text-[#475569]" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Patient Name *
+                  </label>
+                  <Input
+                    value={patientForm.name}
+                    onChange={(e) =>
+                      setPatientForm({ ...patientForm, name: e.target.value })
+                    }
+                    placeholder="e.g., John Martinez"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">Phone *</label>
+                  <Input
+                    value={patientForm.phone}
+                    onChange={(e) =>
+                      setPatientForm({ ...patientForm, phone: e.target.value })
+                    }
+                    placeholder="e.g., (555) 123-4567"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Assigned Doctor *
+                  </label>
+                  <Input
+                    value={patientForm.doctor}
+                    onChange={(e) =>
+                      setPatientForm({ ...patientForm, doctor: e.target.value })
+                    }
+                    placeholder="e.g., Dr. Sarah Johnson"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">Surgery *</label>
+                  <Input
+                    value={patientForm.surgery}
+                    onChange={(e) =>
+                      setPatientForm({
+                        ...patientForm,
+                        surgery: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Knee Replacement"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Risk Level *
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() =>
+                        setPatientForm({ ...patientForm, risk: "Low" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        patientForm.risk === "Low"
+                          ? "border-[#22C55E] bg-[#DCFCE7] text-[#166534]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      Low
+                    </button>
+                    <button
+                      onClick={() =>
+                        setPatientForm({ ...patientForm, risk: "Medium" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        patientForm.risk === "Medium"
+                          ? "border-[#F59E0B] bg-[#FEF3C7] text-[#92400E]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      Medium
+                    </button>
+                    <button
+                      onClick={() =>
+                        setPatientForm({ ...patientForm, risk: "High" })
+                      }
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                        patientForm.risk === "High"
+                          ? "border-[#EF4444] bg-[#FEE2E2] text-[#991B1B]"
+                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                      }`}
+                    >
+                      High
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[#475569] mb-2">Status *</label>
+                  <select
+                    value={patientForm.status}
+                    onChange={(e) =>
+                      setPatientForm({ ...patientForm, status: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                  >
+                    <option value="Pre-Op">Pre-Op</option>
+                    <option value="In Surgery">In Surgery</option>
+                    <option value="In Recovery">In Recovery</option>
+                    <option value="Stable">Stable</option>
+                    <option value="Critical">Critical</option>
+                    <option value="Discharged">Discharged</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => {
+                  setShowModal(false);
+                  setPatientForm({
+                    name: "",
+                    phone: "",
+                    doctor: "",
+                    surgery: "",
+                    risk: "Low",
+                    status: "Pre-Op",
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button fullWidth onClick={handleSavePatient}>
+                Add Patient
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </MainLayout>
   );
 };
