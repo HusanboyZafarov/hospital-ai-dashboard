@@ -2,12 +2,12 @@ export type Gender = "male" | "female" | "other";
 
 export type PatientStatus = "in_recovery" | "discharged";
 
-export type SurgeryRiskLevel = "low" | "medium" | "high";
+export type SurgeryPriorityLevel = "low" | "medium" | "high";
 
 export interface CreateSurgeryRequest {
   name: string; // Required, maxLength: 255, minLength: 1
   type: string; // Required, maxLength: 255, minLength: 1
-  risk_level: SurgeryRiskLevel; // Required, enum
+  priority_level: SurgeryPriorityLevel; // Required, enum
   description?: string; // Optional
 }
 
@@ -57,7 +57,7 @@ export interface Surgery {
   name: string;
   description: string;
   type: string;
-  risk_level: SurgeryRiskLevel;
+  priority_level: SurgeryPriorityLevel;
   diet_plan?: DietPlan;
   activity_plan?: ActivityPlan;
 }

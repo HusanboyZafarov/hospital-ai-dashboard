@@ -1,25 +1,13 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Users,
-  Activity,
-  FileText,
-  ClipboardList,
-  Pill,
-  Utensils,
-  Dumbbell,
-  Bot,
-  Calendar,
-  Settings,
-} from "lucide-react";
+import { LayoutDashboard, Users, Activity, Bot, Settings } from "lucide-react";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Patients", path: "/patients" },
-  { icon: Activity, label: "Surgeries", path: "/surgeries" },
-  { icon: Bot, label: "AI Assistant", path: "/ai-assistant" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: LayoutDashboard, label: "Boshqaruv paneli", path: "/dashboard" },
+  { icon: Users, label: "Bemorlar", path: "/patients" },
+  { icon: Activity, label: "Jarrohlik", path: "/surgeries" },
+  { icon: Bot, label: "AI Yordamchisi", path: "/ai-assistant" },
+  { icon: Settings, label: "Sozlamalar", path: "/settings" },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -35,7 +23,7 @@ export const Sidebar: React.FC = () => {
       <nav className="flex-1 py-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname.includes(item.path);
 
           return (
             <button

@@ -16,36 +16,36 @@ interface Message {
 
 const suggestedPrompts = [
   {
-    title: "Summarize recovery progress",
-    description: "Get a comprehensive overview of patient recovery",
+    title: "Tiklanish jarayonini umumlashtirish",
+    description: "Bemorning tiklanish jarayonining to'liq ko'rinishini olish",
   },
   {
-    title: "Predict risk factors",
-    description: "Analyze potential complications and risk areas",
+    title: "Xavf omillarini bashorat qilish",
+    description: "Mumkin bo'lgan asoratlar va xavfli sohalarni tahlil qilish",
   },
   {
-    title: "Explain instructions simply",
-    description: "Translate medical terms into plain language",
+    title: "Ko'rsatmalarni sodda tushuntirish",
+    description: "Tibbiy terminlarni oddiy tilda tushuntirish",
   },
   {
-    title: "Check danger signs",
-    description: "Identify symptoms that require immediate attention",
+    title: "Xavfli belgilarni tekshirish",
+    description: "Darhol e'tibor talab qiladigan simptomlarni aniqlash",
   },
   {
-    title: "Compare recovery timeline",
-    description: "Compare current progress to typical timelines",
+    title: "Tiklanish vaqtini solishtirish",
+    description: "Joriy taraqqiyotni odatiy vaqt jadvali bilan solishtirish",
   },
   {
-    title: "Medication interactions",
-    description: "Check for potential drug interactions",
+    title: "Dori vositalarining o'zaro ta'siri",
+    description: "Mumkin bo'lgan dori o'zaro ta'sirini tekshirish",
   },
   {
-    title: "Diet recommendations",
-    description: "Get personalized dietary suggestions",
+    title: "Diet tavsiyalari",
+    description: "Shaxsiylashtirilgan diet tavsiyalarini olish",
   },
   {
-    title: "Activity safety check",
-    description: "Verify if specific activities are safe",
+    title: "Faoliyat xavfsizligini tekshirish",
+    description: "Muayyan faoliyatlar xavfsizligini tekshirish",
   },
 ];
 
@@ -54,8 +54,8 @@ const initialMessages: Message[] = [
     id: 1,
     type: "ai",
     content:
-      "Hello! I'm your AI Medical Assistant. I can help you with patient care, recovery monitoring, risk assessment, and answering medical questions. How can I assist you today?",
-    timestamp: "9:00 AM",
+      "Salom! Men sizning AI Tibbiy Yordamchingizman. Men bemorlarga g'amxo'rlik qilish, tiklanishni kuzatish, xavfni baholash va tibbiy savollarga javob berishda yordam bera olaman. Bugun qanday yordam bera olaman?",
+    timestamp: "9:00",
   },
 ];
 
@@ -95,7 +95,7 @@ export const AIAssistant: React.FC = () => {
         type: "ai",
         content:
           response.answer ||
-          "I apologize, but I couldn't generate a response. Please try again.",
+          "Kechirasiz, lekin javob yaratib bo'lmadi. Iltimos, qayta urinib ko'ring.",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -108,7 +108,7 @@ export const AIAssistant: React.FC = () => {
         id: messages.length + 2,
         type: "ai",
         content:
-          "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+          "Kechirasiz, hozirda ulanishda muammo bor. Iltimos, bir ozdan keyin qayta urinib ko'ring.",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -131,7 +131,7 @@ export const AIAssistant: React.FC = () => {
           marginBottom: "32px",
         }}
       >
-        AI Medical Assistant
+        AI Tibbiy Yordamchi
       </h1>
 
       <div className="grid grid-cols-[280px_1fr] gap-6">
@@ -140,7 +140,7 @@ export const AIAssistant: React.FC = () => {
           <Card padding="16px">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles size={16} className="text-[#2563EB]" />
-              <h3>Suggested Prompts</h3>
+              <h3>Taklif etilgan savollar</h3>
             </div>
             <div className="space-y-2">
               {suggestedPrompts.map((prompt, index) => (
@@ -170,7 +170,7 @@ export const AIAssistant: React.FC = () => {
           {/* Messages Area - Scrollable */}
           <div
             className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
-            style={{ minHeight: 0 }}
+            style={{ minHeight: 0, paddingTop: "26px" }}
           >
             {messages.map((message) => (
               <div
@@ -190,7 +190,7 @@ export const AIAssistant: React.FC = () => {
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles size={14} className="text-[#2563EB]" />
                       <span className="text-[13px] text-[#2563EB]">
-                        AI Assistant
+                        AI Yordamchi
                       </span>
                     </div>
                   )}
@@ -279,8 +279,11 @@ export const AIAssistant: React.FC = () => {
                     <Loader2
                       className="animate-spin text-[#2563EB]"
                       size={16}
+                      style={{
+                        animationDuration: "1s",
+                      }}
                     />
-                    <span className="text-[#475569]">Thinking...</span>
+                    <span className="text-[#475569]">O'ylayapman...</span>
                   </div>
                 </div>
               </div>
@@ -296,7 +299,7 @@ export const AIAssistant: React.FC = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Ask me anything about patient care..."
+                placeholder="Bemorlarga g'amxo'rlik haqida savol bering..."
                 className="flex-1 px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
               />
               <Button
@@ -312,8 +315,8 @@ export const AIAssistant: React.FC = () => {
               </Button>
             </div>
             <div className="mt-3 text-[12px] text-[#475569]">
-              AI responses are for informational purposes only. Always consult
-              healthcare professionals for medical decisions.
+              AI javoblari faqat ma'lumot uchun. Tibbiy qarorlar uchun har doim
+              sog'liqni saqlash mutaxassislariga murojaat qiling.
             </div>
           </div>
         </Card>

@@ -22,13 +22,13 @@ import patientsService from "../service/patients";
 import { Patient } from "../types/patient";
 
 const tabs = [
-  { id: "overview", label: "Overview" },
-  { id: "surgery", label: "Surgery" },
-  { id: "admission", label: "Admission" },
-  { id: "care-plan", label: "Care Plan" },
-  { id: "diet", label: "Diet" },
-  { id: "activities", label: "Activities" },
-  { id: "ai-insights", label: "AI Insights" },
+  { id: "overview", label: "Umumiy ko'rinish" },
+  { id: "surgery", label: "Jarrohlik" },
+  { id: "admission", label: "Qabul qilish" },
+  { id: "care-plan", label: "Parvarish rejasi" },
+  { id: "diet", label: "Dieta" },
+  { id: "activities", label: "Faoliyatlar" },
+  { id: "ai-insights", label: "AI tahlillari" },
 ];
 
 export const PatientProfile: React.FC = () => {
@@ -41,7 +41,7 @@ export const PatientProfile: React.FC = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       if (!id) {
-        setError("Patient ID is missing");
+        setError("Bemor ID si topilmadi");
         setIsLoading(false);
         return;
       }
@@ -53,7 +53,9 @@ export const PatientProfile: React.FC = () => {
         setPatient(patientData);
       } catch (err: any) {
         console.error("Failed to fetch patient:", err);
-        setError("Failed to load patient data. Please try again later.");
+        setError(
+          "Bemor ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring."
+        );
       } finally {
         setIsLoading(false);
       }
@@ -65,30 +67,38 @@ export const PatientProfile: React.FC = () => {
   // Map status to display format
   const getStatusDisplay = (status?: string) => {
     const statusMap: Record<string, string> = {
-      pre_op: "Pre-Op",
-      in_surgery: "In Surgery",
-      post_op: "Post-Op",
-      recovery: "In Recovery",
-      in_recovery: "In Recovery",
-      stable: "Stable",
-      discharged: "Discharged",
+      pre_op: "Operatsiyadan oldin",
+      in_surgery: "Operatsiya davomida",
+      post_op: "Operatsiyadan keyin",
+      recovery: "Tiklanishda",
+      in_recovery: "Tiklanishda",
+      stable: "Barqaror",
+      discharged: "Bo'shatilgan",
     };
-    return statusMap[status || ""] || status || "Unknown";
+    return statusMap[status || ""] || status || "Noma'lum";
   };
 
   // Map risk level to badge variant
-  const getRiskBadgeVariant = (riskLevel?: string) => {
-    if (!riskLevel) return "warning";
-    const risk = riskLevel.toLowerCase();
-    if (risk === "high") return "error";
-    if (risk === "medium") return "warning";
+  const getPriorityBadgeVariant = (priorityLevel?: string) => {
+    if (!priorityLevel) return "warning";
+    const priority = priorityLevel.toLowerCase();
+    if (priority === "high") return "error";
+    if (priority === "medium") return "warning";
     return "success";
   };
 
-  // Format risk level for display
-  const getRiskDisplay = (riskLevel?: string) => {
-    if (!riskLevel) return "Unknown";
-    return riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1);
+  // Format priority level for display
+  const getPriorityDisplay = (priorityLevel?: string) => {
+    if (!priorityLevel) return "Noma'lum";
+    const priorityMap: Record<string, string> = {
+      high: "Yuqori",
+      medium: "O'rta",
+      low: "Past",
+    };
+    return (
+      priorityMap[priorityLevel.toLowerCase()] ||
+      priorityLevel.charAt(0).toUpperCase() + priorityLevel.slice(1)
+    );
   };
 
   // Format date for display
@@ -149,7 +159,7 @@ export const PatientProfile: React.FC = () => {
     return (
       <MainLayout>
         <div className="p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-[#DC2626]">
-          {error || "Patient not found"}
+          {error || "Bemor topilmadi"}
         </div>
       </MainLayout>
     );
@@ -160,16 +170,24 @@ export const PatientProfile: React.FC = () => {
       <div className="mb-6">
         <h1 className="mb-2">{patient.full_name}</h1>
         <div className="flex items-center gap-4 text-[#475569]">
-          <span>{patient.age} years old</span>
+          <span>{patient.age} yosh</span>
           <span>•</span>
           <span>
-            {patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}
+            {patient.gender === "male"
+              ? "Erkak"
+              : patient.gender === "female"
+              ? "Ayol"
+              : "Boshqa"}
           </span>
-          {patient.surgery?.risk_level && (
+          {patient.surgery?.priority_level && (
             <>
               <span>•</span>
-              <Badge variant={getRiskBadgeVariant(patient.surgery.risk_level)}>
-                {getRiskDisplay(patient.surgery.risk_level)} Risk
+              <Badge
+                variant={getPriorityBadgeVariant(
+                  patient.surgery.priority_level
+                )}
+              >
+                {getPriorityDisplay(patient.surgery.priority_level)} prioritet
               </Badge>
             </>
           )}
@@ -200,81 +218,95 @@ const OverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   const getStatusDisplay = (status?: string) => {
     const statusMap: Record<string, string> = {
-      pre_op: "Pre-Op",
-      in_surgery: "In Surgery",
-      post_op: "Post-Op",
-      recovery: "In Recovery",
-      in_recovery: "In Recovery",
-      stable: "Stable",
-      discharged: "Discharged",
+      pre_op: "Operatsiyadan oldin",
+      in_surgery: "Operatsiya davomida",
+      post_op: "Operatsiyadan keyin",
+      recovery: "Tiklanishda",
+      in_recovery: "Tiklanishda",
+      stable: "Barqaror",
+      discharged: "Bo'shatilgan",
     };
-    return statusMap[status || ""] || status || "Unknown";
+    return statusMap[status || ""] || status || "Noma'lum";
+  };
+
+  const getPriorityDisplay = (priorityLevel?: string) => {
+    if (!priorityLevel) return "Noma'lum";
+    const priorityMap: Record<string, string> = {
+      high: "Yuqori",
+      medium: "O'rta",
+      low: "Past",
+    };
+    return (
+      priorityMap[priorityLevel.toLowerCase()] ||
+      priorityLevel.charAt(0).toUpperCase() + priorityLevel.slice(1)
+    );
   };
 
   return (
     <div className="grid grid-cols-[40%_60%] gap-6">
       <div className="flex flex-col gap-6">
         <Card>
-          <h3 className="mb-4">Patient Information</h3>
+          <h3 className="mb-4">Bemor ma'lumotlari</h3>
           <div className="space-y-3">
-            <InfoRow label="Full Name" value={patient.full_name} />
-            <InfoRow label="Age" value={`${patient.age} years`} />
-            <InfoRow label="Gender" value={patient.gender} />
-            <InfoRow label="Phone" value={patient.phone} />
-            <InfoRow label="Assigned Doctor" value={patient.assigned_doctor} />
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="mb-4">Admission Summary</h3>
-          <div className="space-y-3">
+            <InfoRow label="To'liq ism" value={patient.full_name} />
+            <InfoRow label="Yosh" value={`${patient.age} yosh`} />
             <InfoRow
-              label="Admitted At"
-              value={formatDate(patient.admitted_at)}
+              label="Jins"
+              value={
+                patient.gender === "male"
+                  ? "Erkak"
+                  : patient.gender === "female"
+                  ? "Ayol"
+                  : "Boshqa"
+              }
             />
-            <InfoRow label="Ward" value={patient.ward} />
-            <InfoRow label="Status" value={getStatusDisplay(patient.status)} />
+            <InfoRow label="Telefon" value={patient.phone} />
+            <InfoRow
+              label="Tayinlangan shifokor"
+              value={patient.assigned_doctor}
+            />
           </div>
         </Card>
       </div>
 
       <div className="flex flex-col gap-6">
         <Card>
-          <h3 className="mb-4">Surgery Summary</h3>
+          <h3 className="mb-4">Jarrohlik xulosa</h3>
           <div className="space-y-4">
             {patient.surgery ? (
               <>
                 <div>
-                  <div className="text-[#475569] mb-1">Surgery Name</div>
+                  <div className="text-[#475569] mb-1">Jarrohlik nomi</div>
                   <div className="text-[#0F172A]">{patient.surgery.name}</div>
                 </div>
                 {patient.surgery.type && (
                   <div>
-                    <div className="text-[#475569] mb-1">Type</div>
+                    <div className="text-[#475569] mb-1">Turi</div>
                     <Badge variant="info">{patient.surgery.type}</Badge>
                   </div>
                 )}
-                {patient.surgery.risk_level && (
+                {patient.surgery.priority_level && (
                   <div>
-                    <div className="text-[#475569] mb-1">Risk Level</div>
+                    <div className="text-[#475569] mb-1">
+                      Prioritet darajasi
+                    </div>
                     <Badge
                       variant={
-                        patient.surgery.risk_level === "high"
+                        patient.surgery.priority_level === "high"
                           ? "error"
-                          : patient.surgery.risk_level === "medium"
+                          : patient.surgery.priority_level === "medium"
                           ? "warning"
                           : "success"
                       }
                     >
-                      {patient.surgery.risk_level.charAt(0).toUpperCase() +
-                        patient.surgery.risk_level.slice(1)}{" "}
-                      Risk
+                      {getPriorityDisplay(patient.surgery.priority_level)}{" "}
+                      prioritet
                     </Badge>
                   </div>
                 )}
                 {patient.surgery.description && (
                   <div>
-                    <div className="text-[#475569] mb-1">Description</div>
+                    <div className="text-[#475569] mb-1">Tavsif</div>
                     <div className="text-[#0F172A]">
                       {patient.surgery.description}
                     </div>
@@ -283,61 +315,37 @@ const OverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
               </>
             ) : (
               <div className="text-[#475569]">
-                No surgery information available
+                Jarrohlik ma'lumotlari mavjud emas
               </div>
             )}
           </div>
         </Card>
 
         <Card>
-          <h3 className="mb-4">Current Vitals</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <VitalCard
-              icon={Heart}
-              label="Heart Rate"
-              value="78 bpm"
-              status="success"
-            />
-            <VitalCard
-              icon={Droplet}
-              label="Blood Pressure"
-              value="145/92"
-              status="warning"
-            />
-            <VitalCard
-              icon={Thermometer}
-              label="Temperature"
-              value="37.2°C"
-              status="success"
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="mb-4">Today's Tasks</h3>
+          <h3 className="mb-4">Bugungi vazifalar</h3>
           <div className="space-y-3">
             <TaskRow
               icon={Pill}
-              task="Administer pain medication"
-              time="10:00 AM"
+              task="Og'riq qoldiruvchi dori berish"
+              time="10:00"
               status="success"
             />
             <TaskRow
               icon={Activity}
-              task="Physical therapy session"
-              time="2:00 PM"
+              task="Jismoniy terapiya seansi"
+              time="14:00"
               status="warning"
             />
             <TaskRow
               icon={Utensils}
-              task="Low-sodium lunch"
-              time="12:30 PM"
+              task="Past natriy tushlik"
+              time="12:30"
               status="success"
             />
             <TaskRow
               icon={FileText}
-              task="Update recovery notes"
-              time="4:00 PM"
+              task="Tiklanish yozuvlarini yangilash"
+              time="16:00"
               status="neutral"
             />
           </div>
@@ -350,15 +358,15 @@ const OverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   const getStatusDisplay = (status?: string) => {
     const statusMap: Record<string, string> = {
-      pre_op: "Pre-Op",
-      in_surgery: "In Surgery",
-      post_op: "Post-Op",
-      recovery: "In Recovery",
-      in_recovery: "In Recovery",
-      stable: "Stable",
-      discharged: "Discharged",
+      pre_op: "Operatsiyadan oldin",
+      in_surgery: "Operatsiya davomida",
+      post_op: "Operatsiyadan keyin",
+      recovery: "Tiklanishda",
+      in_recovery: "Tiklanishda",
+      stable: "Barqaror",
+      discharged: "Bo'shatilgan",
     };
-    return statusMap[status || ""] || status || "Unknown";
+    return statusMap[status || ""] || status || "Noma'lum";
   };
 
   const getStatusBadgeVariant = (status?: string) => {
@@ -372,7 +380,7 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   if (!patient.surgery) {
     return (
       <Card>
-        <div className="text-[#475569]">No surgery information available</div>
+        <div className="text-[#475569]">Jarrohlik ma'lumotlari mavjud emas</div>
       </Card>
     );
   }
@@ -386,19 +394,19 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             {patient.surgery.type && (
               <Badge variant="info">{patient.surgery.type}</Badge>
             )}
-            {patient.surgery.risk_level && (
+            {patient.surgery.priority_level && (
               <Badge
                 variant={
-                  patient.surgery.risk_level === "high"
+                  patient.surgery.priority_level === "high"
                     ? "error"
-                    : patient.surgery.risk_level === "medium"
+                    : patient.surgery.priority_level === "medium"
                     ? "warning"
                     : "success"
                 }
               >
-                {patient.surgery.risk_level.charAt(0).toUpperCase() +
-                  patient.surgery.risk_level.slice(1)}{" "}
-                Risk
+                {patient.surgery.priority_level.charAt(0).toUpperCase() +
+                  patient.surgery.priority_level.slice(1)}{" "}
+                Priority
               </Badge>
             )}
           </div>
@@ -412,7 +420,7 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
         )}
 
         <div>
-          <div className="text-[#475569] mb-2">Assigned Doctor</div>
+          <div className="text-[#475569] mb-2">Tayinlangan shifokor</div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB]">
               {patient.assigned_doctor.charAt(0).toUpperCase()}
@@ -423,9 +431,9 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
         {patient.admitted_at && (
           <div>
-            <div className="text-[#475569] mb-2">Admission Date</div>
+            <div className="text-[#475569] mb-2">Qabul qilingan sana</div>
             <div className="text-[#0F172A]">
-              {new Date(patient.admitted_at).toLocaleDateString("en-US", {
+              {new Date(patient.admitted_at).toLocaleDateString("uz-UZ", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -436,7 +444,7 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
         {patient.status && (
           <div>
-            <div className="text-[#475569] mb-2">Status</div>
+            <div className="text-[#475569] mb-2">Holat</div>
             <Badge variant={getStatusBadgeVariant(patient.status)}>
               {getStatusDisplay(patient.status)}
             </Badge>
@@ -466,14 +474,14 @@ const MedicalRecordsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
     <div className="space-y-6">
       {patient.surgery?.description && (
         <Card>
-          <h3 className="mb-4">Diagnosis</h3>
+          <h3 className="mb-4">Tashxis</h3>
           <p className="text-[#475569]">{patient.surgery.description}</p>
         </Card>
       )}
 
       {patient.medical_records && patient.medical_records.length > 0 && (
         <Card>
-          <h3 className="mb-4">Medical Records</h3>
+          <h3 className="mb-4">Tibbiy yozuvlar</h3>
           <div className="space-y-4">
             {patient.medical_records.map((record) => (
               <NoteItem
@@ -491,7 +499,7 @@ const MedicalRecordsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {(!patient.medical_records || patient.medical_records.length === 0) && (
         <Card>
           <div className="text-[#475569] text-center py-8">
-            No medical records available
+            Tibbiy yozuvlar mavjud emas
           </div>
         </Card>
       )}
@@ -516,15 +524,15 @@ const AdmissionTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   const getStatusDisplay = (status?: string) => {
     const statusMap: Record<string, string> = {
-      pre_op: "Pre-Op",
-      in_surgery: "In Surgery",
-      post_op: "Post-Op",
-      recovery: "In Recovery",
-      in_recovery: "In Recovery",
-      stable: "Stable",
-      discharged: "Discharged",
+      pre_op: "Operatsiyadan oldin",
+      in_surgery: "Operatsiya davomida",
+      post_op: "Operatsiyadan keyin",
+      recovery: "Tiklanishda",
+      in_recovery: "Tiklanishda",
+      stable: "Barqaror",
+      discharged: "Bo'shatilgan",
     };
-    return statusMap[status || ""] || status || "Unknown";
+    return statusMap[status || ""] || status || "Noma'lum";
   };
 
   return (
@@ -534,13 +542,10 @@ const AdmissionTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <thead className="bg-[#F8FAFC]">
             <tr className="border-b border-[#E2E8F0]">
               <th className="text-left px-6 py-4 text-[#475569]">
-                Admission Date
+                Qabul qilingan sana
               </th>
-              <th className="text-left px-6 py-4 text-[#475569]">Ward</th>
-              <th className="text-left px-6 py-4 text-[#475569]">
-                Attending Doctor
-              </th>
-              <th className="text-left px-6 py-4 text-[#475569]">Status</th>
+              <th className="text-left px-6 py-4 text-[#475569]">Shifokor</th>
+              <th className="text-left px-6 py-4 text-[#475569]">Holat</th>
             </tr>
           </thead>
           <tbody>
@@ -549,7 +554,6 @@ const AdmissionTab: React.FC<{ patient: Patient }> = ({ patient }) => {
               style={{ height: "64px" }}
             >
               <td className="px-6 py-4">{formatDate(patient.admitted_at)}</td>
-              <td className="px-6 py-4">{patient.ward}</td>
               <td className="px-6 py-4">{patient.assigned_doctor}</td>
               <td className="px-6 py-4">
                 <Badge variant="success">
@@ -572,13 +576,13 @@ const CarePlanTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       <div className="flex justify-end">
         <Button>
           <Bot size={16} className="inline mr-2" />
-          Generate with AI
+          AI bilan yaratish
         </Button>
       </div>
 
       {carePlan?.pre_op && carePlan.pre_op.length > 0 && (
         <Card>
-          <h3 className="mb-4">Pre-Operative Instructions</h3>
+          <h3 className="mb-4">Operatsiyadan oldingi ko'rsatmalar</h3>
           <ul className="list-disc list-inside space-y-2 text-[#475569]">
             {carePlan.pre_op.map((instruction, index) => (
               <li key={index}>{instruction}</li>
@@ -589,7 +593,7 @@ const CarePlanTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
       {carePlan?.post_op && carePlan.post_op.length > 0 && (
         <Card>
-          <h3 className="mb-4">Post-Operative Instructions</h3>
+          <h3 className="mb-4">Operatsiyadan keyingi ko'rsatmalar</h3>
           <ul className="list-disc list-inside space-y-2 text-[#475569]">
             {carePlan.post_op.map((instruction, index) => (
               <li key={index}>{instruction}</li>
@@ -601,7 +605,7 @@ const CarePlanTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {(!carePlan || (!carePlan.pre_op && !carePlan.post_op)) && (
         <Card>
           <div className="text-[#475569] text-center py-8">
-            No care plan available
+            Parvarish rejasi mavjud emas
           </div>
         </Card>
       )}
@@ -626,23 +630,23 @@ const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   return (
     <Card>
-      <h3 className="mb-4">Current Medications</h3>
+      <h3 className="mb-4">Joriy dorilar</h3>
       {patient.medications && patient.medications.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#F8FAFC]">
               <tr className="border-b border-[#E2E8F0]">
+                <th className="text-left px-6 py-4 text-[#475569]">Dori</th>
+                <th className="text-left px-6 py-4 text-[#475569]">Dozasi</th>
                 <th className="text-left px-6 py-4 text-[#475569]">
-                  Medication
-                </th>
-                <th className="text-left px-6 py-4 text-[#475569]">Dosage</th>
-                <th className="text-left px-6 py-4 text-[#475569]">
-                  Frequency
+                  Chastotasi
                 </th>
                 <th className="text-left px-6 py-4 text-[#475569]">
-                  Start Date
+                  Boshlanish sanasi
                 </th>
-                <th className="text-left px-6 py-4 text-[#475569]">End Date</th>
+                <th className="text-left px-6 py-4 text-[#475569]">
+                  Tugash sanasi
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -668,7 +672,7 @@ const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
         </div>
       ) : (
         <div className="text-[#475569] text-center py-8">
-          No medications available
+          Dorilar mavjud emas
         </div>
       )}
     </Card>
@@ -690,47 +694,50 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {dietPlan && (
         <>
           <Card>
-            <h3 className="mb-4">Diet Plan Summary</h3>
+            <h3 className="mb-4">Dieta rejasi xulosa</h3>
             <div className="space-y-3">
               {isCareBundleDietPlan(dietPlan) ? (
                 <>
                   {dietPlan.summary.diet_type && (
                     <InfoRow
-                      label="Diet Type"
+                      label="Dieta turi"
                       value={dietPlan.summary.diet_type}
                     />
                   )}
                   {dietPlan.summary.goal_calories && (
                     <InfoRow
-                      label="Goal Calories"
+                      label="Maqsadli kaloriya"
                       value={dietPlan.summary.goal_calories}
                     />
                   )}
                   {dietPlan.summary.notes && (
-                    <InfoRow label="Notes" value={dietPlan.summary.notes} />
+                    <InfoRow
+                      label="Eslatmalar"
+                      value={dietPlan.summary.notes}
+                    />
                   )}
                 </>
               ) : (
                 <>
                   {dietPlan.diet_type && (
-                    <InfoRow label="Diet Type" value={dietPlan.diet_type} />
+                    <InfoRow label="Dieta turi" value={dietPlan.diet_type} />
                   )}
                   {dietPlan.goal_calories && (
                     <InfoRow
-                      label="Goal Calories"
+                      label="Maqsadli kaloriya"
                       value={
                         typeof dietPlan.goal_calories === "number"
-                          ? `${dietPlan.goal_calories} kcal/day`
+                          ? `${dietPlan.goal_calories} kcal/kun`
                           : dietPlan.goal_calories
                       }
                     />
                   )}
                   {dietPlan.notes && (
-                    <InfoRow label="Notes" value={dietPlan.notes} />
+                    <InfoRow label="Eslatmalar" value={dietPlan.notes} />
                   )}
                   {dietPlan.protein_target && (
                     <InfoRow
-                      label="Protein Target"
+                      label="Protein maqsadi"
                       value={dietPlan.protein_target}
                     />
                   )}
@@ -742,7 +749,7 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <div className="grid grid-cols-2 gap-6">
             {dietPlan.allowed_foods && dietPlan.allowed_foods.length > 0 && (
               <Card>
-                <h3 className="mb-4 text-[#22C55E]">Allowed Foods</h3>
+                <h3 className="mb-4 text-[#22C55E]">Ruxsat etilgan ovqatlar</h3>
                 <ul className="space-y-2">
                   {(Array.isArray(dietPlan.allowed_foods)
                     ? dietPlan.allowed_foods
@@ -763,7 +770,7 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
             {dietPlan.forbidden_foods &&
               dietPlan.forbidden_foods.length > 0 && (
                 <Card>
-                  <h3 className="mb-4 text-[#EF4444]">Forbidden Foods</h3>
+                  <h3 className="mb-4 text-[#EF4444]">Taqiqlangan ovqatlar</h3>
                   <ul className="space-y-2">
                     {(Array.isArray(dietPlan.forbidden_foods)
                       ? dietPlan.forbidden_foods
@@ -785,7 +792,7 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           {patient.care_bundle?.diet_plan?.meal_plan &&
             patient.care_bundle.diet_plan.meal_plan.length > 0 && (
               <Card>
-                <h3 className="mb-4">Meal Plan</h3>
+                <h3 className="mb-4">Ovqatlanish rejasi</h3>
                 <div className="space-y-4">
                   {patient.care_bundle.diet_plan.meal_plan.map(
                     (meal, index) => {
@@ -809,7 +816,7 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {!dietPlan && (
         <Card>
           <div className="text-[#475569] text-center py-8">
-            No diet plan available
+            Dieta rejasi mavjud emas
           </div>
         </Card>
       )}
@@ -817,7 +824,7 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       <div className="flex justify-end">
         <Button>
           <Bot size={16} className="inline mr-2" />
-          Optimize Diet with AI
+          AI bilan dietani optimallashtirish
         </Button>
       </div>
     </div>
@@ -834,7 +841,9 @@ const ActivitiesTab: React.FC<{ patient: Patient }> = ({ patient }) => {
         <div className="grid grid-cols-2 gap-6">
           {activityPlan.allowed && activityPlan.allowed.length > 0 && (
             <div>
-              <h3 className="mb-4 text-[#22C55E]">Allowed Activities</h3>
+              <h3 className="mb-4 text-[#22C55E]">
+                Ruxsat etilgan faoliyatlar
+              </h3>
               <div className="grid grid-cols-2 gap-3">
                 {(Array.isArray(activityPlan.allowed)
                   ? activityPlan.allowed
@@ -854,7 +863,7 @@ const ActivitiesTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
           {activityPlan.restricted && activityPlan.restricted.length > 0 && (
             <div>
-              <h3 className="mb-4 text-[#EF4444]">Restricted Activities</h3>
+              <h3 className="mb-4 text-[#EF4444]">Cheklangan faoliyatlar</h3>
               <div className="grid grid-cols-2 gap-3">
                 {(Array.isArray(activityPlan.restricted)
                   ? activityPlan.restricted
@@ -876,7 +885,7 @@ const ActivitiesTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
       {patient.surgery?.activity_plan?.notes && (
         <Card>
-          <h3 className="mb-4">Activity Notes</h3>
+          <h3 className="mb-4">Faoliyat eslatmalari</h3>
           <p className="text-[#475569]">
             {patient.surgery.activity_plan.notes}
           </p>
@@ -886,23 +895,24 @@ const ActivitiesTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {!activityPlan && (
         <Card>
           <div className="text-[#475569] text-center py-8">
-            No activity plan available
+            Faoliyat rejasi mavjud emas
           </div>
         </Card>
       )}
 
       <Card>
-        <h3 className="mb-4">AI Safety Checker</h3>
+        <h3 className="mb-4">AI xavfsizlik tekshiruvchisi</h3>
         <p className="text-[#475569] mb-4">
-          Ask AI if an activity is safe for this patient's current condition.
+          AI dan so'rang, bu bemorning hozirgi holati uchun faoliyat xavfsizmi
+          yoki yo'qmi.
         </p>
         <div className="flex gap-3">
           <input
             type="text"
-            placeholder="E.g., Can I swim?"
+            placeholder="Masalan, Men suzishim mumkinmi?"
             className="flex-1 px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white"
           />
-          <Button>Check Safety</Button>
+          <Button>Xavfsizlikni tekshirish</Button>
         </div>
       </Card>
     </div>
@@ -914,33 +924,12 @@ const AIInsightsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   return (
     <div className="space-y-6">
-      {aiInsights?.risk_assessments &&
-        aiInsights.risk_assessments.length > 0 && (
-          <Card>
-            <h3 className="mb-4">Risk Assessment</h3>
-            <div className="space-y-4">
-              {aiInsights.risk_assessments.map((assessment, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-lg bg-[#FEE2E2] border border-[#FECACA]"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="error">High Risk</Badge>
-                    <span className="text-[#991B1B]">AI Alert</span>
-                  </div>
-                  <p className="text-[#991B1B] text-[14px]">{assessment}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
       {aiInsights?.predictive_analytics &&
         aiInsights.predictive_analytics.length > 0 && (
           <Card>
-            <h3 className="mb-4">Predictive Analytics</h3>
+            <h3 className="mb-4">Bashoratli tahlil</h3>
             <p className="text-[#475569] mb-4">
-              Based on current progress, AI predicts:
+              Hozirgi taraqqiyotga asoslanib, AI bashorat qiladi:
             </p>
             <ul className="list-disc list-inside space-y-2 text-[#475569]">
               {aiInsights.predictive_analytics.map((prediction, index) => (
@@ -953,7 +942,7 @@ const AIInsightsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {aiInsights?.recommended_actions &&
         aiInsights.recommended_actions.length > 0 && (
           <Card>
-            <h3 className="mb-4">Recommended Actions</h3>
+            <h3 className="mb-4">Tavsiya etilgan harakatlar</h3>
             <ul className="space-y-3">
               {aiInsights.recommended_actions.map((action, index) => (
                 <li key={index} className="flex items-start gap-3">
@@ -972,7 +961,7 @@ const AIInsightsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
       {!aiInsights && (
         <Card>
           <div className="text-[#475569] text-center py-8">
-            No AI insights available
+            AI tahlillari mavjud emas
           </div>
         </Card>
       )}
@@ -1088,10 +1077,10 @@ const TaskRow: React.FC<{
       </div>
       <Badge variant={getBadgeVariant()} size="sm">
         {status === "success"
-          ? "Done"
+          ? "Bajarildi"
           : status === "warning"
-          ? "Pending"
-          : "Scheduled"}
+          ? "Kutilmoqda"
+          : "Rejalashtirilgan"}
       </Badge>
     </div>
   );
@@ -1166,10 +1155,10 @@ const AppointmentRow: React.FC<{
 }> = ({ date, time, doctor, type, status }) => {
   const getBadge = () => {
     if (status === "completed")
-      return <Badge variant="neutral">Completed</Badge>;
+      return <Badge variant="neutral">Tugallangan</Badge>;
     if (status === "confirmed")
-      return <Badge variant="success">Confirmed</Badge>;
-    return <Badge variant="info">Scheduled</Badge>;
+      return <Badge variant="success">Tasdiqlangan</Badge>;
+    return <Badge variant="info">Rejalashtirilgan</Badge>;
   };
 
   return (

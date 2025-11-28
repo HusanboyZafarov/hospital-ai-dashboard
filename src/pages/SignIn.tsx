@@ -17,7 +17,7 @@ export const SignIn: React.FC = () => {
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password");
+      setError("Iltimos, foydalanuvchi nomi va parolni kiriting");
       return;
     }
 
@@ -35,29 +35,41 @@ export const SignIn: React.FC = () => {
           err.response.data?.detail;
 
         if (status === 401) {
-          setError("Invalid username or password. Please try again.");
+          setError(
+            "Noto'g'ri foydalanuvchi nomi yoki parol. Iltimos, qayta urinib ko'ring."
+          );
         } else if (status === 400) {
           setError(
-            errorMessage || "Invalid request. Please check your credentials."
+            errorMessage ||
+              "Noto'g'ri so'rov. Iltimos, ma'lumotlaringizni tekshiring."
           );
         } else if (status === 403) {
-          setError("Access denied. Please contact your administrator.");
+          setError(
+            "Kirish rad etildi. Iltimos, administratoringizga murojaat qiling."
+          );
         } else if (status === 404) {
-          setError("Service not found. Please try again later.");
+          setError("Xizmat topilmadi. Iltimos, keyinroq qayta urinib ko'ring.");
         } else if (status >= 500) {
-          setError("Server error. Please try again later.");
+          setError("Server xatosi. Iltimos, keyinroq qayta urinib ko'ring.");
         } else {
-          setError(errorMessage || "Login failed. Please try again.");
+          setError(
+            errorMessage ||
+              "Kirish muvaffaqiyatsiz. Iltimos, qayta urinib ko'ring."
+          );
         }
       } else if (err?.request) {
         // Network error - request was made but no response received
-        setError("Network error. Please check your connection and try again.");
+        setError(
+          "Tarmoq xatosi. Iltimos, ulanishni tekshiring va qayta urinib ko'ring."
+        );
       } else if (err?.message) {
         // Other error with message
         setError(err.message);
       } else {
         // Unknown error
-        setError("An unexpected error occurred. Please try again.");
+        setError(
+          "Kutilmagan xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+        );
       }
 
       console.error("Login error:", err);
@@ -73,22 +85,22 @@ export const SignIn: React.FC = () => {
         <Card padding="32px">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <h1 className="text-center text-[#0F172A]">
-              Sign in to Hospital AI Dashboard
+              Hospital AI Dashboard'ga kirish
             </h1>
 
             <Input
-              label="Username"
+              label="Foydalanuvchi nomi"
               type="text"
-              placeholder="Enter your username"
+              placeholder="Foydalanuvchi nomingizni kiriting"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
 
             <Input
-              label="Password"
+              label="Parol"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Parolingizni kiriting"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -106,7 +118,7 @@ export const SignIn: React.FC = () => {
               style={{ height: "48px" }}
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Kirilmoqda..." : "Kirish"}
             </Button>
           </form>
         </Card>

@@ -31,7 +31,7 @@ interface PatientListItem {
   phone: string;
   assigned_doctor: string;
   surgery_name?: string;
-  surgery_risk_level?: string;
+  surgery_priority_level?: string;
   status: string;
 }
 
@@ -62,11 +62,11 @@ const mapAPIPatientToComponent = (
     low: "Low",
   };
 
-  // Check if it's a list item (has surgery_risk_level) or detail (has surgery.risk_level)
+  // Check if it's a list item (has surgery_priority_level) or detail (has surgery.priority_level)
   const priorityLevel =
-    "surgery_risk_level" in apiPatient
-      ? (apiPatient as PatientListItem).surgery_risk_level
-      : (apiPatient as APIPatient).surgery?.risk_level;
+    "surgery_priority_level" in apiPatient
+      ? (apiPatient as PatientListItem).surgery_priority_level
+      : (apiPatient as APIPatient).surgery?.priority_level;
 
   const priority =
     priorityLevelMap[(priorityLevel || "").toLowerCase()] || "Medium";
@@ -125,7 +125,9 @@ export const PatientsList: React.FC = () => {
         setPatients(mappedPatients);
       } catch (err: any) {
         console.error("Failed to fetch patients:", err);
-        setError("Failed to load patients. Please try again later.");
+        setError(
+          "Bemorlarni yuklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring."
+        );
       } finally {
         setIsLoading(false);
       }
@@ -206,21 +208,42 @@ export const PatientsList: React.FC = () => {
       const searchPhone = normalizePhone(searchTerm);
 
       filtered = filtered.filter((patient) => {
-        const nameMatch =
-          patient.name?.toLowerCase().includes(searchLower) || false;
-        const phoneMatch =
-          patient.phone?.toLowerCase().includes(searchLower) || false;
-        const phoneNormalizedMatch = normalizePhone(
-          patient.phone || ""
-        ).includes(searchPhone);
-        const doctorMatch =
-          patient.doctor?.toLowerCase().includes(searchLower) || false;
+        if (!patient || !patient.name) return false;
+
+        // Name search - most important, check first
+        const nameMatch = patient.name
+          ? patient.name.toLowerCase().includes(searchLower)
+          : false;
+
+        // Phone search
+        const phoneMatch = patient.phone
+          ? patient.phone.toLowerCase().includes(searchLower)
+          : false;
+        const phoneNormalizedMatch =
+          patient.phone && searchPhone.length > 0
+            ? normalizePhone(patient.phone).includes(searchPhone)
+            : false;
+
+        // Doctor search
+        const doctorMatch = patient.doctor
+          ? patient.doctor.toLowerCase().includes(searchLower)
+          : false;
+
+        // Surgery search
         const surgeryMatch =
-          patient.surgery?.toLowerCase().includes(searchLower) || false;
-        const statusMatch =
-          patient.status?.toLowerCase().includes(searchLower) || false;
-        const priorityMatch =
-          patient.priority?.toLowerCase().includes(searchLower) || false;
+          patient.surgery && patient.surgery !== "N/A"
+            ? patient.surgery.toLowerCase().includes(searchLower)
+            : false;
+
+        // Status search
+        const statusMatch = patient.status
+          ? patient.status.toLowerCase().includes(searchLower)
+          : false;
+
+        // Priority search
+        const priorityMatch = patient.priority
+          ? patient.priority.toLowerCase().includes(searchLower)
+          : false;
 
         return (
           nameMatch ||
@@ -237,20 +260,22 @@ export const PatientsList: React.FC = () => {
     // Apply surgery filter
     if (filterSurgery) {
       filtered = filtered.filter(
-        (patient) => patient.surgery === filterSurgery
+        (patient) => patient && patient.surgery === filterSurgery
       );
     }
 
     // Apply priority filter
     if (filterPriority) {
       filtered = filtered.filter(
-        (patient) => patient.priority === filterPriority
+        (patient) => patient && patient.priority === filterPriority
       );
     }
 
     // Apply doctor filter
     if (filterDoctor) {
-      filtered = filtered.filter((patient) => patient.doctor === filterDoctor);
+      filtered = filtered.filter(
+        (patient) => patient && patient.doctor === filterDoctor
+      );
     }
 
     return filtered;
@@ -301,11 +326,14 @@ export const PatientsList: React.FC = () => {
       setShowModal(true);
     } catch (err: any) {
       console.error("Failed to fetch patient details:", err);
+      alert(
+        "Bemor ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+      );
     }
   };
 
   const handleDeletePatient = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this patient?")) {
+    if (window.confirm("Haqiqatan ham bu bemorni o'chirmoqchimisiz?")) {
       try {
         await patientsService.deletePatient(id);
         setPatients(patients.filter((p) => p.id !== id));
@@ -322,6 +350,7 @@ export const PatientsList: React.FC = () => {
       !patientForm.assigned_doctor.trim() ||
       patientForm.age <= 0
     ) {
+      alert("Iltimos, barcha majburiy maydonlarni to'ldiring");
       return;
     }
 
@@ -375,8 +404,8 @@ export const PatientsList: React.FC = () => {
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
-        <h1>Patients</h1>
-        <Button onClick={handleAddPatient}>+ New Patient</Button>
+        <h1>Bemorlar</h1>
+        <Button onClick={handleAddPatient}>+ Yangi bemor</Button>
       </div>
 
       {error && (
@@ -399,7 +428,7 @@ export const PatientsList: React.FC = () => {
                 size={20}
               />
               <Input
-                placeholder="Search patients..."
+                placeholder="Bemorlarni qidirish..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -412,7 +441,7 @@ export const PatientsList: React.FC = () => {
                 className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
                 style={{ minWidth: "180px", minHeight: "48px" }}
               >
-                <option value="">All Surgeries</option>
+                <option value="">Barcha jarrohliklar</option>
                 {uniqueSurgeries.map((surgery) => (
                   <option key={surgery} value={surgery}>
                     {surgery}
@@ -427,10 +456,10 @@ export const PatientsList: React.FC = () => {
                 className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
                 style={{ minWidth: "180px", minHeight: "48px" }}
               >
-                <option value="">All Priorities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
+                <option value="">Barcha prioritetlar</option>
+                <option value="High">Yuqori</option>
+                <option value="Medium">O'rtacha</option>
+                <option value="Low">Past</option>
               </select>
             </div>
             <div className="relative">
@@ -440,7 +469,7 @@ export const PatientsList: React.FC = () => {
                 className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
                 style={{ minWidth: "180px", minHeight: "48px" }}
               >
-                <option value="">All Doctors</option>
+                <option value="">Barcha shifokorlar</option>
                 {uniqueDoctors.map((doctor) => (
                   <option key={doctor} value={doctor}>
                     {doctor}
@@ -451,7 +480,7 @@ export const PatientsList: React.FC = () => {
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearFilters}>
                 <XCircle size={16} className="inline mr-2" />
-                Clear Filters
+                Filtrlarni tozalash
               </Button>
             )}
           </div>
@@ -465,20 +494,24 @@ export const PatientsList: React.FC = () => {
               <thead className="bg-[#F8FAFC]">
                 <tr className="border-b border-[#E2E8F0]">
                   <th className="text-left px-6 py-4 text-[#475569]">
-                    Patient Name
-                  </th>
-                  <th className="text-left px-6 py-4 text-[#475569]">Phone</th>
-                  <th className="text-left px-6 py-4 text-[#475569]">
-                    Assigned Doctor
+                    Bemor ismi
                   </th>
                   <th className="text-left px-6 py-4 text-[#475569]">
-                    Surgery
+                    Telefon
                   </th>
                   <th className="text-left px-6 py-4 text-[#475569]">
-                    Priority Level
+                    Tayinlangan shifokor
                   </th>
-                  <th className="text-left px-6 py-4 text-[#475569]">Status</th>
-                  <th className="text-left px-6 py-4 text-[#475569]">Action</th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Jarrohlik
+                  </th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Prioritet darajasi
+                  </th>
+                  <th className="text-left px-6 py-4 text-[#475569]">Holat</th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Harakat
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -489,10 +522,10 @@ export const PatientsList: React.FC = () => {
                       className="px-6 py-8 text-center text-[#475569]"
                     >
                       {hasActiveFilters
-                        ? `No patients found matching your filters${
+                        ? `Filtrlaringizga mos bemorlar topilmadi${
                             searchTerm ? ` "${searchTerm}"` : ""
                           }`
-                        : "No patients available"}
+                        : "Bemorlar mavjud emas"}
                     </td>
                   </tr>
                 ) : (
@@ -528,10 +561,10 @@ export const PatientsList: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <Button
                             variant="primary"
-                            onClick={() => navigate(`/patient/${patient.id}`)}
+                            onClick={() => navigate(`/patients/${patient.id}`)}
                             className="py-2"
                           >
-                            View Profile
+                            Profilni ko'rish
                           </Button>
                           <button
                             onClick={() => handleEditPatient(patient)}
@@ -570,7 +603,11 @@ export const PatientsList: React.FC = () => {
                 className="w-[95%] min-w-[1400px] max-h-[90vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2>{editingPatient ? "Edit Patient" : "Add New Patient"}</h2>
+                  <h2>
+                    {editingPatient
+                      ? "Bemorni tahrirlash"
+                      : "Yangi bemor qo'shish"}
+                  </h2>
                   <button
                     onClick={() => {
                       setShowModal(false);
@@ -596,7 +633,7 @@ export const PatientsList: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Full Name *
+                        To'liq ism *
                       </label>
                       <Input
                         value={patientForm.full_name}
@@ -606,12 +643,12 @@ export const PatientsList: React.FC = () => {
                             full_name: e.target.value,
                           })
                         }
-                        placeholder="e.g., John Martinez"
+                        placeholder="masalan, Aliyev Vali"
                       />
                     </div>
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Phone *
+                        Telefon *
                       </label>
                       <Input
                         value={patientForm.phone}
@@ -621,14 +658,16 @@ export const PatientsList: React.FC = () => {
                             phone: e.target.value,
                           })
                         }
-                        placeholder="e.g., (555) 123-4567"
+                        placeholder="masalan, +998901234567"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[#475569] mb-2">Age *</label>
+                      <label className="block text-[#475569] mb-2">
+                        Yosh *
+                      </label>
                       <Input
                         type="number"
                         value={patientForm.age || ""}
@@ -638,12 +677,12 @@ export const PatientsList: React.FC = () => {
                             age: parseInt(e.target.value) || 0,
                           })
                         }
-                        placeholder="e.g., 45"
+                        placeholder="masalan, 45"
                       />
                     </div>
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Gender *
+                        Jins *
                       </label>
                       <select
                         value={patientForm.gender}
@@ -655,8 +694,8 @@ export const PatientsList: React.FC = () => {
                         }
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
                       >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
+                        <option value="male">Erkak</option>
+                        <option value="female">Ayol</option>
                       </select>
                     </div>
                   </div>
@@ -664,7 +703,7 @@ export const PatientsList: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Assigned Doctor *
+                        Tayinlangan shifokor *
                       </label>
                       <Input
                         value={patientForm.assigned_doctor}
@@ -674,12 +713,12 @@ export const PatientsList: React.FC = () => {
                             assigned_doctor: e.target.value,
                           })
                         }
-                        placeholder="e.g., Dr. Sarah Johnson"
+                        placeholder="masalan, Dr. Aliyev Vali"
                       />
                     </div>
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Admitted At *
+                        Qabul qilingan sana *
                       </label>
                       <Input
                         type="date"
@@ -692,29 +731,29 @@ export const PatientsList: React.FC = () => {
                         }
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-[#475569] mb-2">
-                      Status *
-                    </label>
-                    <select
-                      value={patientForm.status}
-                      onChange={(e) =>
-                        setPatientForm({
-                          ...patientForm,
-                          status: e.target.value as PatientStatus,
-                        })
-                      }
-                      className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
-                    >
-                      <option value="in_recovery">In Recovery</option>
-                      <option value="discharged">Discharged</option>
-                    </select>
+                    <div>
+                      <label className="block text-[#475569] mb-2">
+                        Holat *
+                      </label>
+                      <select
+                        value={patientForm.status}
+                        onChange={(e) =>
+                          setPatientForm({
+                            ...patientForm,
+                            status: e.target.value as PatientStatus,
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                      >
+                        <option value="in_recovery">Tiklanishda</option>
+                        <option value="discharged">Chiqarilgan</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-[#475569] mb-2">
-                      Surgery (Optional)
+                      Jarrohlik (ixtiyoriy)
                     </label>
                     {isLoadingSurgeries ? (
                       <div className="flex items-center gap-2 py-3">
@@ -723,7 +762,7 @@ export const PatientsList: React.FC = () => {
                           className="animate-spin text-[#2563EB]"
                         />
                         <span className="text-[#475569] text-[14px]">
-                          Loading surgeries...
+                          Jarrohliklar yuklanmoqda...
                         </span>
                       </div>
                     ) : (
@@ -739,20 +778,20 @@ export const PatientsList: React.FC = () => {
                         }}
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
                       >
-                        <option value="">No surgery assigned</option>
+                        <option value="">Jarrohlik tayinlanmagan</option>
                         {surgeries.map((surgery) => (
                           <option key={surgery.id} value={surgery.id}>
                             {surgery.name} ({surgery.type}) -{" "}
-                            {surgery.risk_level.charAt(0).toUpperCase() +
-                              surgery.risk_level.slice(1)}{" "}
-                            Priority
+                            {surgery.priority_level.charAt(0).toUpperCase() +
+                              surgery.priority_level.slice(1)}{" "}
+                            Prioritet
                           </option>
                         ))}
                       </select>
                     )}
                     <p className="text-[12px] text-[#475569] mt-1">
-                      Select a surgery from the list or leave empty if no
-                      surgery assigned.
+                      Ro'yxatdan jarrohlikni tanlang yoki jarrohlik
+                      tayinlanmagan bo'lsa bo'sh qoldiring.
                     </p>
                   </div>
                 </div>
@@ -776,7 +815,7 @@ export const PatientsList: React.FC = () => {
                       });
                     }}
                   >
-                    Cancel
+                    Bekor qilish
                   </Button>
                   <Button
                     fullWidth
@@ -784,10 +823,10 @@ export const PatientsList: React.FC = () => {
                     disabled={isSaving}
                   >
                     {isSaving
-                      ? "Saving..."
+                      ? "Saqlanmoqda..."
                       : editingPatient
-                      ? "Update Patient"
-                      : "Add Patient"}
+                      ? "Bemorni yangilash"
+                      : "Bemor qo'shish"}
                   </Button>
                 </div>
               </Card>

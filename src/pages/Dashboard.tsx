@@ -60,21 +60,21 @@ interface MappedTask {
 const defaultStatsCards = [
   {
     icon: Users,
-    title: "Total Patients",
+    title: "Jami bemorlar",
     value: "0",
     color: "#2563EB",
     key: "total_patients",
   },
   {
     icon: Activity,
-    title: "Surgeries Today",
+    title: "Bugungi jarrohliklar",
     value: "0",
     color: "#0EA5E9",
     key: "surgeries_today",
   },
   {
     icon: AlertTriangle,
-    title: "High-Risk Patients",
+    title: "Yuqori xavfli bemorlar",
     value: "0",
     color: "#EF4444",
     key: "high_risk_patients",
@@ -97,7 +97,9 @@ export const Dashboard: React.FC = () => {
         setDashboardData(data);
       } catch (err: any) {
         console.error("Failed to fetch dashboard data:", err);
-        setError("Failed to load dashboard data. Please try again later.");
+        setError(
+          "Boshqaruv paneli ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring."
+        );
         // Set default data on error
         setDashboardData({
           total_patients: 0,
@@ -166,7 +168,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <MainLayout>
-      <h1 style={{ marginBottom: "32px" }}>Dashboard</h1>
+      <h1 style={{ marginBottom: "32px" }}>Boshqaruv paneli</h1>
 
       {error && (
         <div className="mb-4 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-[#DC2626]">
@@ -209,7 +211,7 @@ export const Dashboard: React.FC = () => {
 
           {/* Today's Care Tasks */}
           <Card padding="24px">
-            <h3 className="mb-4">Recent patients</h3>
+            <h3 className="mb-4">So'nggi bemorlar</h3>
             {mappedCareTasks.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {mappedCareTasks.map((task, index) => {
@@ -223,12 +225,12 @@ export const Dashboard: React.FC = () => {
                       <div className="flex-1 text-[#0F172A]">{task.task}</div>
                       <Badge variant={task.status} size="sm">
                         {task.status === "success"
-                          ? "Done"
+                          ? "Bajarildi"
                           : task.status === "warning"
-                          ? "Pending"
+                          ? "Kutilmoqda"
                           : task.status === "error"
-                          ? "Overdue"
-                          : "In Progress"}
+                          ? "Muddat o'tgan"
+                          : "Jarayonda"}
                       </Badge>
                     </div>
                   );
@@ -236,7 +238,7 @@ export const Dashboard: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-8 text-[#475569]">
-                No care tasks available
+                Parvarishlash vazifalari mavjud emas
               </div>
             )}
           </Card>

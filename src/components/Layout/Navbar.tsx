@@ -6,9 +6,6 @@ export const Navbar: React.FC = () => {
   const { user } = useAuth();
 
   const displayName = user?.name || user?.username || "User";
-  const displayRole = user?.role
-    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-    : "User";
 
   return (
     <div
@@ -28,7 +25,6 @@ export const Navbar: React.FC = () => {
         </div>
         <div className="text-right">
           <div className="text-[#0F172A]">{displayName}</div>
-          <div className="text-[#475569] text-[13px]">{displayRole}</div>
         </div>
       </div>
     </div>

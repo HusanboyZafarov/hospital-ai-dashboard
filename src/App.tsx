@@ -63,7 +63,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/patient/:id"
+        path="/patients/:id"
         element={
           <ProtectedRoute>
             <PatientProfile />
@@ -79,7 +79,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/surgery/:id"
+        path="/surgeries/:id"
         element={
           <ProtectedRoute>
             <SurgeryDetail />
