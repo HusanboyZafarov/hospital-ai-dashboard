@@ -16,6 +16,8 @@ import { Activities } from "./pages/Activities";
 import { AIAssistant } from "./pages/AIAssistant";
 import { Appointments } from "./pages/Appointments";
 import { Surgeries } from "./pages/Surgeries";
+import { SurgeryDetail } from "./pages/SurgeryDetail";
+import SuggestionDetail from "./pages/SuggestionDetail";
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({
@@ -72,6 +74,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Surgeries />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/surgery/:id"
+        element={
+          <ProtectedRoute>
+            <SurgeryDetail />
           </ProtectedRoute>
         }
       />
@@ -136,6 +146,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/suggestion/:id"
+        element={
+          <ProtectedRoute>
+            <SuggestionDetail />
           </ProtectedRoute>
         }
       />

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Tabs } from "../components/ui/tabs";
 import { Input } from "../components/ui/input";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   FileText,
@@ -16,8 +17,12 @@ import {
   Edit,
   Trash2,
   X,
+  Loader2,
 } from "lucide-react";
+import surgeriesService from "../service/surgeries";
+import { Surgery as APISurgery, SurgeryRiskLevel } from "../types/patient";
 
+// Component's internal Surgery interface (for display purposes)
 interface Surgery {
   id: number;
   name: string;
@@ -31,86 +36,50 @@ interface Surgery {
   expectedDuration: string;
 }
 
-const surgeriesData: Surgery[] = [
-  {
-    id: 1,
-    name: "Total Knee Replacement",
-    category: "Orthopedic",
-    patientName: "John Martinez",
-    surgeon: "Dr. Michael Chen",
-    date: "November 16, 2025 at 9:00 AM",
-    status: "Completed",
-    riskLevel: "High",
-    description:
-      "Complete replacement of damaged knee joint with prosthetic implant due to severe osteoarthritis.",
-    expectedDuration: "2-3 hours",
-  },
-  {
-    id: 2,
-    name: "Appendectomy",
-    category: "General Surgery",
-    patientName: "Emma Williams",
-    surgeon: "Dr. Sarah Johnson",
-    date: "November 20, 2025 at 2:00 PM",
-    status: "Completed",
-    riskLevel: "Low",
-    description:
-      "Surgical removal of the appendix to treat acute appendicitis. Minimally invasive laparoscopic procedure.",
-    expectedDuration: "1-2 hours",
-  },
-  {
-    id: 3,
-    name: "Cardiac Bypass",
-    category: "Cardiac",
-    patientName: "Michael Chen",
-    surgeon: "Dr. Emily Brown",
-    date: "December 5, 2025 at 7:00 AM",
-    status: "Scheduled",
-    riskLevel: "High",
-    description:
-      "Coronary artery bypass graft surgery to restore normal blood flow to the heart muscle.",
-    expectedDuration: "4-6 hours",
-  },
-  {
-    id: 4,
-    name: "Hip Replacement",
-    category: "Orthopedic",
-    patientName: "Sarah Johnson",
-    surgeon: "Dr. Michael Chen",
-    date: "November 18, 2025 at 10:00 AM",
-    status: "Completed",
-    riskLevel: "Medium",
-    description:
-      "Total hip arthroplasty to replace damaged hip joint with artificial components.",
-    expectedDuration: "2-3 hours",
-  },
-  {
-    id: 5,
-    name: "Gallbladder Removal",
-    category: "General Surgery",
-    patientName: "David Smith",
-    surgeon: "Dr. Sarah Johnson",
-    date: "December 10, 2025 at 11:00 AM",
-    status: "Scheduled",
-    riskLevel: "Low",
-    description:
-      "Laparoscopic cholecystectomy to remove gallbladder due to gallstones and inflammation.",
-    expectedDuration: "1-2 hours",
-  },
-  {
-    id: 6,
-    name: "Spinal Fusion",
-    category: "Orthopedic",
-    patientName: "Lisa Anderson",
-    surgeon: "Dr. Michael Chen",
-    date: "November 22, 2025 at 8:00 AM",
-    status: "In Progress",
-    riskLevel: "High",
-    description:
-      "Surgical procedure to join two or more vertebrae together to stabilize the spine.",
-    expectedDuration: "3-4 hours",
-  },
-];
+// Map API surgery to component format
+const mapAPISurgeryToComponent = (apiSurgery: APISurgery): Surgery => {
+  const riskLevelMap: Record<SurgeryRiskLevel, "Low" | "Medium" | "High"> = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+  };
+
+  return {
+    id: apiSurgery.id,
+    name: apiSurgery.name,
+    category: apiSurgery.type || "General",
+    patientName: "N/A", // Not in API
+    surgeon: "N/A", // Not in API
+    date: "N/A", // Not in API
+    status: "Scheduled", // Not in API, default
+    riskLevel: riskLevelMap[apiSurgery.risk_level] || "Medium",
+    description: apiSurgery.description || "",
+    expectedDuration: "N/A", // Not in API
+  };
+};
+
+// Map component surgery to API format
+const mapComponentToAPISurgery = (
+  surgery: Omit<Surgery, "id">
+): {
+  name: string;
+  type: string;
+  risk_level: SurgeryRiskLevel;
+  description?: string;
+} => {
+  const riskLevelMap: Record<"Low" | "Medium" | "High", SurgeryRiskLevel> = {
+    Low: "low",
+    Medium: "medium",
+    High: "high",
+  };
+
+  return {
+    name: surgery.name,
+    type: surgery.category,
+    risk_level: riskLevelMap[surgery.riskLevel] || "medium",
+    description: surgery.description || undefined,
+  };
+};
 
 const allowedFoods = [
   "Lean chicken and turkey",
@@ -214,11 +183,12 @@ const tabs = [
 ];
 
 export const Surgeries: React.FC = () => {
-  const [surgeries, setSurgeries] = useState<Surgery[]>(surgeriesData);
+  const navigate = useNavigate();
+  const [surgeries, setSurgeries] = useState<Surgery[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSurgery, setSelectedSurgery] = useState<Surgery | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
   const [showNewSurgeryModal, setShowNewSurgeryModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [surgeryForm, setSurgeryForm] = useState<Omit<Surgery, "id">>({
     name: "",
     category: "",
@@ -230,6 +200,26 @@ export const Surgeries: React.FC = () => {
     description: "",
     expectedDuration: "",
   });
+
+  // Fetch surgeries from API
+  useEffect(() => {
+    const fetchSurgeries = async () => {
+      try {
+        setIsLoading(true);
+        const apiSurgeries = await surgeriesService.getSurgeries();
+        const mappedSurgeries = apiSurgeries.map(mapAPISurgeryToComponent);
+        setSurgeries(mappedSurgeries);
+      } catch (error) {
+        console.error("Failed to fetch surgeries:", error);
+        // Fallback to empty array on error
+        setSurgeries([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSurgeries();
+  }, []);
 
   const getStatusBadge = (status: string) => {
     if (status === "Completed") return "success";
@@ -247,7 +237,6 @@ export const Surgeries: React.FC = () => {
   const filteredSurgeries = surgeries.filter(
     (surgery) =>
       surgery.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      surgery.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       surgery.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -266,85 +255,48 @@ export const Surgeries: React.FC = () => {
     setShowNewSurgeryModal(true);
   };
 
-  const handleSaveSurgery = () => {
-    if (
-      !surgeryForm.name.trim() ||
-      !surgeryForm.category.trim() ||
-      !surgeryForm.patientName.trim() ||
-      !surgeryForm.surgeon.trim() ||
-      !surgeryForm.date.trim() ||
-      !surgeryForm.description.trim() ||
-      !surgeryForm.expectedDuration.trim()
-    ) {
-      alert("Please fill in all required fields");
+  const handleSaveSurgery = async () => {
+    if (!surgeryForm.name.trim() || !surgeryForm.category.trim()) {
+      alert("Please fill in name and category");
       return;
     }
 
-    const newId = Math.max(...surgeries.map((s) => s.id), 0) + 1;
-    setSurgeries([...surgeries, { ...surgeryForm, id: newId }]);
-    setShowNewSurgeryModal(false);
-    setSurgeryForm({
-      name: "",
-      category: "",
-      patientName: "",
-      surgeon: "",
-      date: "",
-      status: "Scheduled",
-      riskLevel: "Low",
-      description: "",
-      expectedDuration: "",
-    });
-  };
-
-  const handleViewDetails = (surgery: Surgery) => {
-    setSelectedSurgery(surgery);
-    setActiveTab("overview");
-  };
-
-  const handleBackToList = () => {
-    setSelectedSurgery(null);
-    setActiveTab("overview");
-  };
-
-  const renderTabContent = () => {
-    if (!selectedSurgery) return null;
-
-    switch (activeTab) {
-      case "overview":
-        return <OverviewTab surgery={selectedSurgery} />;
-      case "diet-plan":
-        return <DietPlanTab surgery={selectedSurgery} />;
-      case "activities":
-        return <ActivitiesTab surgery={selectedSurgery} />;
-      case "medical-records":
-        return <MedicalRecordsTab surgery={selectedSurgery} />;
-      default:
-        return <OverviewTab surgery={selectedSurgery} />;
+    try {
+      setIsSaving(true);
+      const apiSurgery = mapComponentToAPISurgery(surgeryForm);
+      const createdSurgery = await surgeriesService.postSurgery(apiSurgery);
+      const mappedSurgery = mapAPISurgeryToComponent(createdSurgery);
+      setSurgeries([...surgeries, mappedSurgery]);
+      setShowNewSurgeryModal(false);
+      setSurgeryForm({
+        name: "",
+        category: "",
+        patientName: "",
+        surgeon: "",
+        date: "",
+        status: "Scheduled",
+        riskLevel: "Low",
+        description: "",
+        expectedDuration: "",
+      });
+    } catch (error) {
+      console.error("Failed to create surgery:", error);
+      alert("Failed to create surgery. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (selectedSurgery) {
+  const handleViewDetails = (surgery: Surgery) => {
+    navigate(`/surgery/${surgery.id}`);
+  };
+
+  if (isLoading) {
     return (
       <MainLayout>
-        <div className="mb-6">
-          <Button variant="outline" onClick={handleBackToList} className="mb-4">
-            ← Back to Surgeries
-          </Button>
-          <h1 className="mb-2">{selectedSurgery.name}</h1>
-          <div className="flex items-center gap-4 text-[#475569]">
-            <span>{selectedSurgery.category}</span>
-            <span>•</span>
-            <span>{selectedSurgery.patientName}</span>
-            <span>•</span>
-            <Badge variant={getRiskBadge(selectedSurgery.riskLevel)}>
-              {selectedSurgery.riskLevel} Risk
-            </Badge>
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="animate-spin text-[#2563EB]" size={32} />
         </div>
-
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-
-        {renderTabContent()}
       </MainLayout>
     );
   }
@@ -353,7 +305,16 @@ export const Surgeries: React.FC = () => {
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
         <h1>Surgeries</h1>
-        <Button onClick={handleAddSurgery}>+ New Surgery</Button>
+        <Button onClick={handleAddSurgery} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="animate-spin inline mr-2" size={16} />
+              Saving...
+            </>
+          ) : (
+            "+ New Surgery"
+          )}
+        </Button>
       </div>
 
       {/* Search */}
@@ -389,33 +350,46 @@ export const Surgeries: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredSurgeries.map((surgery) => (
-              <tr
-                key={surgery.id}
-                className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
-                style={{ height: "64px" }}
-              >
-                <td className="px-6 py-4 text-[#0F172A] font-medium">
-                  {surgery.name}
-                </td>
-                <td className="px-6 py-4 text-[#475569]">{surgery.category}</td>
-
-                <td className="px-6 py-4">
-                  <Badge variant={getRiskBadge(surgery.riskLevel)}>
-                    {surgery.riskLevel}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleViewDetails(surgery)}
-                    className="py-2"
-                  >
-                    View Details
-                  </Button>
+            {filteredSurgeries.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="px-6 py-8 text-center text-[#475569]"
+                >
+                  No surgeries found. Click "+ New Surgery" to add one.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredSurgeries.map((surgery) => (
+                <tr
+                  key={surgery.id}
+                  className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
+                  style={{ height: "64px" }}
+                >
+                  <td className="px-6 py-4 text-[#0F172A] font-medium">
+                    {surgery.name}
+                  </td>
+                  <td className="px-6 py-4 text-[#475569]">
+                    {surgery.category}
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <Badge variant={getRiskBadge(surgery.riskLevel)}>
+                      {surgery.riskLevel}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleViewDetails(surgery)}
+                      className="py-2"
+                    >
+                      View Details
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -490,83 +464,6 @@ export const Surgeries: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#475569] mb-2">
-                    Patient Name *
-                  </label>
-                  <Input
-                    value={surgeryForm.patientName}
-                    onChange={(e) =>
-                      setSurgeryForm({
-                        ...surgeryForm,
-                        patientName: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., John Martinez"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[#475569] mb-2">Surgeon *</label>
-                  <Input
-                    value={surgeryForm.surgeon}
-                    onChange={(e) =>
-                      setSurgeryForm({
-                        ...surgeryForm,
-                        surgeon: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., Dr. Michael Chen"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#475569] mb-2">Date *</label>
-                  <Input
-                    value={surgeryForm.date}
-                    onChange={(e) =>
-                      setSurgeryForm({ ...surgeryForm, date: e.target.value })
-                    }
-                    placeholder="e.g., November 16, 2025 at 9:00 AM"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[#475569] mb-2">
-                    Expected Duration *
-                  </label>
-                  <Input
-                    value={surgeryForm.expectedDuration}
-                    onChange={(e) =>
-                      setSurgeryForm({
-                        ...surgeryForm,
-                        expectedDuration: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., 2-3 hours"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#475569] mb-2">Status *</label>
-                  <select
-                    value={surgeryForm.status}
-                    onChange={(e) =>
-                      setSurgeryForm({
-                        ...surgeryForm,
-                        status: e.target.value as Surgery["status"],
-                      })
-                    }
-                    className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
-                  >
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[#475569] mb-2">
                     Risk Level *
                   </label>
                   <div className="flex gap-3">
@@ -611,9 +508,7 @@ export const Surgeries: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[#475569] mb-2">
-                  Description *
-                </label>
+                <label className="block text-[#475569] mb-2">Description</label>
                 <textarea
                   value={surgeryForm.description}
                   onChange={(e) =>
@@ -650,8 +545,15 @@ export const Surgeries: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button fullWidth onClick={handleSaveSurgery}>
-                Add Surgery
+              <Button fullWidth onClick={handleSaveSurgery} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin inline mr-2" size={16} />
+                    Saving...
+                  </>
+                ) : (
+                  "Add Surgery"
+                )}
               </Button>
             </div>
           </Card>
@@ -662,43 +564,55 @@ export const Surgeries: React.FC = () => {
 };
 
 // Tab Components
-const OverviewTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => (
-  <Card>
-    <div className="space-y-6">
-      <div>
-        <h2>{surgery.name}</h2>
-        <Badge variant="info" className="mt-2">
-          {surgery.category}
-        </Badge>
-      </div>
+const OverviewTab: React.FC<{
+  surgery: Surgery;
+  apiSurgery: APISurgery | null;
+}> = ({ surgery, apiSurgery }) => {
+  const displaySurgery = apiSurgery || surgery;
+  const riskLevelMap: Record<SurgeryRiskLevel, "Low" | "Medium" | "High"> = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+  };
+  const riskLevel = apiSurgery
+    ? riskLevelMap[apiSurgery.risk_level] || "Medium"
+    : surgery.riskLevel;
 
-      <div>
-        <div className="text-[#475569] mb-2">Description</div>
-        <p className="text-[#0F172A]">{surgery.description}</p>
-      </div>
+  return (
+    <Card>
+      <div className="space-y-6">
+        <div>
+          <h2>{displaySurgery.name}</h2>
+          <Badge variant="info" className="mt-2">
+            {apiSurgery ? apiSurgery.type : surgery.category}
+          </Badge>
+        </div>
 
-      <div>
-        <div className="text-[#475569] mb-2">Risk Level</div>
-        <Badge
-          variant={
-            surgery.riskLevel === "High"
-              ? "error"
-              : surgery.riskLevel === "Medium"
-              ? "warning"
-              : "success"
-          }
-        >
-          {surgery.riskLevel} Risk
-        </Badge>
-      </div>
+        {displaySurgery.description && (
+          <div>
+            <div className="text-[#475569] mb-2">Description</div>
+            <p className="text-[#0F172A]">{displaySurgery.description}</p>
+          </div>
+        )}
 
-      <div>
-        <div className="text-[#475569] mb-2">Expected Duration</div>
-        <div className="text-[#0F172A]">{surgery.expectedDuration}</div>
+        <div>
+          <div className="text-[#475569] mb-2">Risk Level</div>
+          <Badge
+            variant={
+              riskLevel === "High"
+                ? "error"
+                : riskLevel === "Medium"
+                ? "warning"
+                : "success"
+            }
+          >
+            {riskLevel} Risk
+          </Badge>
+        </div>
       </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 interface Food {
   id: number;
@@ -720,34 +634,84 @@ interface DietPlan {
   notes: string;
 }
 
-const DietPlanTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
-  const [dietPlan, setDietPlan] = useState<DietPlan>({
-    dietType: "Low-Sodium, High-Protein",
-    goalCalories: "2000 kcal/day",
-    proteinTarget: "100g/day",
-    notes:
-      "Focus on lean proteins and vegetables to support post-surgical recovery. Limit sodium intake to reduce swelling and support cardiovascular health. Maintain adequate hydration with at least 8 glasses of water daily.",
-  });
+const DietPlanTab: React.FC<{
+  surgery: Surgery;
+  apiSurgery: APISurgery | null;
+}> = ({ surgery, apiSurgery }) => {
+  // Use API diet plan if available, otherwise use defaults
+  const apiDietPlan = apiSurgery?.diet_plan;
 
-  const initialAllowedFoods: Food[] = allowedFoods.map((food, idx) => ({
-    id: idx + 1,
-    name: food,
-    type: "allowed" as const,
-  }));
-  const initialForbiddenFoods: Food[] = forbiddenFoods.map((food, idx) => ({
-    id: idx + 100,
-    name: food,
-    type: "forbidden" as const,
-  }));
+  const getInitialDietPlan = (): DietPlan => {
+    if (apiDietPlan) {
+      return {
+        dietType: apiDietPlan.diet_type || "Low-Sodium, High-Protein",
+        goalCalories: apiDietPlan.goal_calories
+          ? `${apiDietPlan.goal_calories} kcal/day`
+          : "2000 kcal/day",
+        proteinTarget: apiDietPlan.protein_target || "100g/day",
+        notes:
+          apiDietPlan.notes ||
+          "Focus on lean proteins and vegetables to support post-surgical recovery. Limit sodium intake to reduce swelling and support cardiovascular health. Maintain adequate hydration with at least 8 glasses of water daily.",
+      };
+    }
+    return {
+      dietType: "Low-Sodium, High-Protein",
+      goalCalories: "2000 kcal/day",
+      proteinTarget: "100g/day",
+      notes:
+        "Focus on lean proteins and vegetables to support post-surgical recovery. Limit sodium intake to reduce swelling and support cardiovascular health. Maintain adequate hydration with at least 8 glasses of water daily.",
+    };
+  };
 
-  const [allowedFoodsList, setAllowedFoodsList] =
-    useState<Food[]>(initialAllowedFoods);
+  const getInitialAllowedFoods = (): Food[] => {
+    if (apiDietPlan?.allowed_foods) {
+      return apiDietPlan.allowed_foods.map((food) => ({
+        id: food.id,
+        name: food.name,
+        type: "allowed" as const,
+      }));
+    }
+    return allowedFoods.map((food, idx) => ({
+      id: idx + 1,
+      name: food,
+      type: "allowed" as const,
+    }));
+  };
+
+  const getInitialForbiddenFoods = (): Food[] => {
+    if (apiDietPlan?.forbidden_foods) {
+      return apiDietPlan.forbidden_foods.map((food) => ({
+        id: food.id,
+        name: food.name,
+        type: "forbidden" as const,
+      }));
+    }
+    return forbiddenFoods.map((food, idx) => ({
+      id: idx + 100,
+      name: food,
+      type: "forbidden" as const,
+    }));
+  };
+
+  const [dietPlan, setDietPlan] = useState<DietPlan>(getInitialDietPlan());
+  const [allowedFoodsList, setAllowedFoodsList] = useState<Food[]>(
+    getInitialAllowedFoods()
+  );
   const [forbiddenFoodsList, setForbiddenFoodsList] = useState<Food[]>(
-    initialForbiddenFoods
+    getInitialForbiddenFoods()
   );
   const [mealsList, setMealsList] = useState<Meal[]>(
     meals.map((meal, idx) => ({ ...meal, id: idx + 1 }))
   );
+
+  // Update state when API surgery data changes
+  useEffect(() => {
+    if (apiSurgery?.diet_plan) {
+      setDietPlan(getInitialDietPlan());
+      setAllowedFoodsList(getInitialAllowedFoods());
+      setForbiddenFoodsList(getInitialForbiddenFoods());
+    }
+  }, [apiSurgery]);
 
   const [showFoodModal, setShowFoodModal] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
@@ -1328,20 +1292,57 @@ interface Activity {
   type: "allowed" | "restricted";
 }
 
-const ActivitiesTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
-  const initialAllowedActivities: Activity[] = allowedActivities.map(
-    (act, idx) => ({ id: idx + 1, name: act, type: "allowed" as const })
-  );
-  const initialRestrictedActivities: Activity[] = restrictedActivities.map(
-    (act, idx) => ({ id: idx + 100, name: act, type: "restricted" as const })
-  );
+const ActivitiesTab: React.FC<{
+  surgery: Surgery;
+  apiSurgery: APISurgery | null;
+}> = ({ surgery, apiSurgery }) => {
+  // Use API activity plan if available, otherwise use defaults
+  const apiActivityPlan = apiSurgery?.activity_plan;
+
+  const getInitialAllowedActivities = (): Activity[] => {
+    if (apiActivityPlan?.allowed) {
+      return apiActivityPlan.allowed.map((act) => ({
+        id: act.id,
+        name: act.name,
+        type: "allowed" as const,
+      }));
+    }
+    return allowedActivities.map((act, idx) => ({
+      id: idx + 1,
+      name: act,
+      type: "allowed" as const,
+    }));
+  };
+
+  const getInitialRestrictedActivities = (): Activity[] => {
+    if (apiActivityPlan?.restricted) {
+      return apiActivityPlan.restricted.map((act) => ({
+        id: act.id,
+        name: act.name,
+        type: "restricted" as const,
+      }));
+    }
+    return restrictedActivities.map((act, idx) => ({
+      id: idx + 100,
+      name: act,
+      type: "restricted" as const,
+    }));
+  };
 
   const [allowedActivitiesList, setAllowedActivitiesList] = useState<
     Activity[]
-  >(initialAllowedActivities);
+  >(getInitialAllowedActivities());
   const [restrictedActivitiesList, setRestrictedActivitiesList] = useState<
     Activity[]
-  >(initialRestrictedActivities);
+  >(getInitialRestrictedActivities());
+
+  // Update state when API surgery data changes
+  useEffect(() => {
+    if (apiSurgery?.activity_plan) {
+      setAllowedActivitiesList(getInitialAllowedActivities());
+      setRestrictedActivitiesList(getInitialRestrictedActivities());
+    }
+  }, [apiSurgery]);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [activityForm, setActivityForm] = useState({
@@ -1705,7 +1706,10 @@ interface MedicalFile {
   date: string;
 }
 
-const MedicalRecordsTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => {
+const MedicalRecordsTab: React.FC<{
+  surgery: Surgery;
+  apiSurgery: APISurgery | null;
+}> = ({ surgery, apiSurgery }) => {
   // Initial medications data - can be customized per surgery type
   const initialMedications: Medication[] = [
     {
