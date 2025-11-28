@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
-import { Card } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
+import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { CheckCircle, XCircle } from "lucide-react";
 
 const allowedActivities = [

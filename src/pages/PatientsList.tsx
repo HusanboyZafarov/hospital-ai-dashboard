@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
-import { Input } from "../components/ui/Input";
-import { Button } from "../components/ui/Button";
-import { Badge } from "../components/ui/Badge";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter } from "lucide-react";
 
