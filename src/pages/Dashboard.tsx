@@ -66,13 +66,6 @@ const defaultStatsCards = [
     key: "total_patients",
   },
   {
-    icon: Activity,
-    title: "Bugungi jarrohliklar",
-    value: "0",
-    color: "#0EA5E9",
-    key: "surgeries_today",
-  },
-  {
     icon: AlertTriangle,
     title: "Yuqori xavfli bemorlar",
     value: "0",
@@ -183,7 +176,7 @@ export const Dashboard: React.FC = () => {
       ) : (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-2 gap-6 mb-8">
             {statsCards.map((stat, index) => {
               const Icon = stat.icon;
               return (
