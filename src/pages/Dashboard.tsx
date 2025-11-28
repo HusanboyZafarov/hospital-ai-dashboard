@@ -1,7 +1,7 @@
 import React from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
-import { Card } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import {
   Users,
   Activity,

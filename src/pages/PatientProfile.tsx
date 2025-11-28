@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
-import { Card } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
-import { Tabs } from "../components/ui/Tabs";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Tabs } from "../components/ui/tabs";
 import { useParams } from "react-router-dom";
 import {
   Activity,
