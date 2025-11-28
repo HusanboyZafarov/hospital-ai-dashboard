@@ -104,7 +104,6 @@ export const Dashboard: React.FC = () => {
           surgeries_today: 0,
           high_risk_patients: 0,
           appointments_today: 0,
-          alerts: [],
           tasks: [],
         });
       } finally {
@@ -208,41 +207,9 @@ export const Dashboard: React.FC = () => {
             })}
           </div>
 
-          {/* AI Alerts Panel */}
-          <Card padding="16px" className="mb-8">
-            <h3 className="mb-4 px-2" style={{ marginBottom: "20px" }}>
-              AI Alerts
-            </h3>
-            {aiAlerts.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {aiAlerts.map((alert, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-[#F8FAFC] transition-colors border-l-4"
-                    style={{ borderLeftColor: alert.color }}
-                  >
-                    <div className="flex-1">
-                      <div className="text-[#0F172A] mb-1">{alert.patient}</div>
-                      <div className="text-[14px] text-[#475569]">
-                        {alert.issue}
-                      </div>
-                    </div>
-                    <Badge variant={alert.risk} size="sm">
-                      {alert.risk === "error" ? "High Risk" : "Monitor"}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-[#475569]">
-                No AI alerts at this time
-              </div>
-            )}
-          </Card>
-
           {/* Today's Care Tasks */}
           <Card padding="24px">
-            <h3 className="mb-4">Today's Care Tasks</h3>
+            <h3 className="mb-4">Recent patients</h3>
             {mappedCareTasks.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {mappedCareTasks.map((task, index) => {

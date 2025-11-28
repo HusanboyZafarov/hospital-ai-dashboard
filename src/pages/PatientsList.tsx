@@ -5,7 +5,15 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, X, Edit, Trash2, Loader2 } from "lucide-react";
+import {
+  Search,
+  Filter,
+  X,
+  Edit,
+  Trash2,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import patientsService from "../service/patients";
 import surgeriesService from "../service/surgeries";
 import {
@@ -33,7 +41,7 @@ interface Patient {
   phone: string;
   doctor: string;
   surgery: string;
-  risk: "High" | "Medium" | "Low";
+  priority: "High" | "Medium" | "Low";
   status: string;
 }
 
@@ -43,29 +51,25 @@ const mapAPIPatientToComponent = (
 ): Patient => {
   // Map status to display format
   const statusMap: Record<string, string> = {
-    pre_op: "Pre-Op",
-    in_surgery: "In Surgery",
-    post_op: "Post-Op",
-    recovery: "In Recovery",
     in_recovery: "In Recovery",
-    stable: "Stable",
     discharged: "Discharged",
   };
 
   // Map risk level from API - handle both list and detail endpoint structures
-  const riskLevelMap: Record<string, "High" | "Medium" | "Low"> = {
+  const priorityLevelMap: Record<string, "High" | "Medium" | "Low"> = {
     high: "High",
     medium: "Medium",
     low: "Low",
   };
 
   // Check if it's a list item (has surgery_risk_level) or detail (has surgery.risk_level)
-  const riskLevel =
+  const priorityLevel =
     "surgery_risk_level" in apiPatient
       ? (apiPatient as PatientListItem).surgery_risk_level
       : (apiPatient as APIPatient).surgery?.risk_level;
 
-  const risk = riskLevelMap[(riskLevel || "").toLowerCase()] || "Medium";
+  const priority =
+    priorityLevelMap[(priorityLevel || "").toLowerCase()] || "Medium";
 
   // Get surgery name from either structure
   const surgeryName =
@@ -79,7 +83,7 @@ const mapAPIPatientToComponent = (
     phone: apiPatient.phone,
     doctor: apiPatient.assigned_doctor,
     surgery: surgeryName || "N/A",
-    risk,
+    priority,
     status:
       statusMap[apiPatient.status || "pre_op"] || apiPatient.status || "Pre-Op",
   };
@@ -96,6 +100,9 @@ export const PatientsList: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [surgeries, setSurgeries] = useState<Surgery[]>([]);
   const [isLoadingSurgeries, setIsLoadingSurgeries] = useState(false);
+  const [filterSurgery, setFilterSurgery] = useState<string>("");
+  const [filterPriority, setFilterPriority] = useState<string>("");
+  const [filterDoctor, setFilterDoctor] = useState<string>("");
   const [patientForm, setPatientForm] = useState<CreatePatientRequest>({
     full_name: "",
     age: 0,
@@ -103,8 +110,7 @@ export const PatientsList: React.FC = () => {
     phone: "",
     assigned_doctor: "",
     admitted_at: new Date().toISOString().split("T")[0],
-    ward: "",
-    status: "pre_op",
+    status: "in_recovery",
     surgery_id: null,
   });
 
@@ -128,17 +134,34 @@ export const PatientsList: React.FC = () => {
     fetchPatients();
   }, []);
 
+  // Fetch surgeries on mount for filters
+  useEffect(() => {
+    const fetchSurgeries = async () => {
+      setIsLoadingSurgeries(true);
+      try {
+        const apiSurgeries = await surgeriesService.getSurgeries();
+        setSurgeries(apiSurgeries);
+      } catch (err: any) {
+        console.error("Failed to fetch surgeries:", err);
+        setSurgeries([]);
+      } finally {
+        setIsLoadingSurgeries(false);
+      }
+    };
+
+    fetchSurgeries();
+  }, []);
+
   // Fetch surgeries when modal opens
   useEffect(() => {
     const fetchSurgeries = async () => {
-      if (showModal) {
+      if (showModal && surgeries.length === 0) {
         setIsLoadingSurgeries(true);
         try {
           const apiSurgeries = await surgeriesService.getSurgeries();
           setSurgeries(apiSurgeries);
         } catch (err: any) {
           console.error("Failed to fetch surgeries:", err);
-          // Don't show error to user, just log it
           setSurgeries([]);
         } finally {
           setIsLoadingSurgeries(false);
@@ -147,11 +170,11 @@ export const PatientsList: React.FC = () => {
     };
 
     fetchSurgeries();
-  }, [showModal]);
+  }, [showModal, surgeries.length]);
 
-  const getRiskBadge = (risk: string) => {
-    if (risk === "High") return "error";
-    if (risk === "Medium") return "warning";
+  const getPriorityBadge = (priority: string) => {
+    if (priority === "High") return "error";
+    if (priority === "Medium") return "warning";
     return "success";
   };
 
@@ -162,26 +185,86 @@ export const PatientsList: React.FC = () => {
     return "neutral";
   };
 
+  // Get unique values for filters
+  const uniqueSurgeries = useMemo(() => {
+    const surgerySet = new Set(patients.map((p) => p.surgery).filter(Boolean));
+    return Array.from(surgerySet).sort();
+  }, [patients]);
+
+  const uniqueDoctors = useMemo(() => {
+    const doctorSet = new Set(patients.map((p) => p.doctor).filter(Boolean));
+    return Array.from(doctorSet).sort();
+  }, [patients]);
+
   const filteredPatients = useMemo(() => {
+    let filtered = [...patients];
+
+    // Apply search filter first
     const searchLower = searchTerm.toLowerCase().trim();
-    if (!searchLower) return patients; // Show all if search is empty
+    if (searchLower) {
+      const normalizePhone = (phone: string) => phone.replace(/[^\d]/g, "");
+      const searchPhone = normalizePhone(searchTerm);
 
-    // Remove formatting from phone for better search
-    const normalizePhone = (phone: string) => phone.replace(/[^\d]/g, "");
-    const searchPhone = normalizePhone(searchTerm);
+      filtered = filtered.filter((patient) => {
+        const nameMatch =
+          patient.name?.toLowerCase().includes(searchLower) || false;
+        const phoneMatch =
+          patient.phone?.toLowerCase().includes(searchLower) || false;
+        const phoneNormalizedMatch = normalizePhone(
+          patient.phone || ""
+        ).includes(searchPhone);
+        const doctorMatch =
+          patient.doctor?.toLowerCase().includes(searchLower) || false;
+        const surgeryMatch =
+          patient.surgery?.toLowerCase().includes(searchLower) || false;
+        const statusMatch =
+          patient.status?.toLowerCase().includes(searchLower) || false;
+        const priorityMatch =
+          patient.priority?.toLowerCase().includes(searchLower) || false;
 
-    return patients.filter((patient) => {
-      return (
-        patient.name.toLowerCase().includes(searchLower) ||
-        patient.phone.toLowerCase().includes(searchLower) ||
-        normalizePhone(patient.phone).includes(searchPhone) ||
-        patient.doctor.toLowerCase().includes(searchLower) ||
-        patient.surgery.toLowerCase().includes(searchLower) ||
-        patient.status.toLowerCase().includes(searchLower) ||
-        patient.risk.toLowerCase().includes(searchLower)
+        return (
+          nameMatch ||
+          phoneMatch ||
+          phoneNormalizedMatch ||
+          doctorMatch ||
+          surgeryMatch ||
+          statusMatch ||
+          priorityMatch
+        );
+      });
+    }
+
+    // Apply surgery filter
+    if (filterSurgery) {
+      filtered = filtered.filter(
+        (patient) => patient.surgery === filterSurgery
       );
-    });
-  }, [patients, searchTerm]);
+    }
+
+    // Apply priority filter
+    if (filterPriority) {
+      filtered = filtered.filter(
+        (patient) => patient.priority === filterPriority
+      );
+    }
+
+    // Apply doctor filter
+    if (filterDoctor) {
+      filtered = filtered.filter((patient) => patient.doctor === filterDoctor);
+    }
+
+    return filtered;
+  }, [patients, searchTerm, filterSurgery, filterPriority, filterDoctor]);
+
+  const clearFilters = () => {
+    setFilterSurgery("");
+    setFilterPriority("");
+    setFilterDoctor("");
+    setSearchTerm("");
+  };
+
+  const hasActiveFilters =
+    filterSurgery || filterPriority || filterDoctor || searchTerm;
 
   const handleAddPatient = () => {
     setEditingPatient(null);
@@ -192,8 +275,7 @@ export const PatientsList: React.FC = () => {
       phone: "",
       assigned_doctor: "",
       admitted_at: new Date().toISOString().split("T")[0],
-      ward: "",
-      status: "pre_op",
+      status: "in_recovery",
       surgery_id: null,
     });
     setShowModal(true);
@@ -213,14 +295,12 @@ export const PatientsList: React.FC = () => {
         admitted_at: apiPatient.admitted_at
           ? new Date(apiPatient.admitted_at).toISOString().split("T")[0]
           : new Date().toISOString().split("T")[0],
-        ward: apiPatient.ward,
-        status: apiPatient.status || "pre_op",
+        status: apiPatient.status || "in_recovery",
         surgery_id: apiPatient.surgery_id || null,
       });
       setShowModal(true);
     } catch (err: any) {
       console.error("Failed to fetch patient details:", err);
-      alert("Failed to load patient details. Please try again.");
     }
   };
 
@@ -231,7 +311,6 @@ export const PatientsList: React.FC = () => {
         setPatients(patients.filter((p) => p.id !== id));
       } catch (err: any) {
         console.error("Failed to delete patient:", err);
-        alert("Failed to delete patient. Please try again.");
       }
     }
   };
@@ -241,10 +320,8 @@ export const PatientsList: React.FC = () => {
       !patientForm.full_name.trim() ||
       !patientForm.phone.trim() ||
       !patientForm.assigned_doctor.trim() ||
-      !patientForm.ward.trim() ||
       patientForm.age <= 0
     ) {
-      alert("Please fill in all required fields");
       return;
     }
 
@@ -285,16 +362,11 @@ export const PatientsList: React.FC = () => {
         phone: "",
         assigned_doctor: "",
         admitted_at: new Date().toISOString().split("T")[0],
-        ward: "",
-        status: "pre_op",
+        status: "in_recovery",
         surgery_id: null,
       });
     } catch (err: any) {
       console.error("Failed to save patient:", err);
-      alert(
-        err?.response?.data?.message ||
-          "Failed to save patient. Please try again."
-      );
     } finally {
       setIsSaving(false);
     }
@@ -320,7 +392,7 @@ export const PatientsList: React.FC = () => {
       ) : (
         <>
           {/* Search and Filters */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-wrap gap-4 mb-6 ">
             <div className="relative flex-1" style={{ maxWidth: "400px" }}>
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#475569]"
@@ -333,18 +405,55 @@ export const PatientsList: React.FC = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              <Filter size={16} className="inline mr-2" />
-              Surgery
-            </Button>
-            <Button variant="outline">
-              <Filter size={16} className="inline mr-2" />
-              Risk Level
-            </Button>
-            <Button variant="outline">
-              <Filter size={16} className="inline mr-2" />
-              Doctor
-            </Button>
+            <div className="relative">
+              <select
+                value={filterSurgery}
+                onChange={(e) => setFilterSurgery(e.target.value)}
+                className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
+                style={{ minWidth: "180px", minHeight: "48px" }}
+              >
+                <option value="">All Surgeries</option>
+                {uniqueSurgeries.map((surgery) => (
+                  <option key={surgery} value={surgery}>
+                    {surgery}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
+                style={{ minWidth: "180px", minHeight: "48px" }}
+              >
+                <option value="">All Priorities</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <div className="relative">
+              <select
+                value={filterDoctor}
+                onChange={(e) => setFilterDoctor(e.target.value)}
+                className="px-4 py-2 pr-8 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent appearance-none cursor-pointer"
+                style={{ minWidth: "180px", minHeight: "48px" }}
+              >
+                <option value="">All Doctors</option>
+                {uniqueDoctors.map((doctor) => (
+                  <option key={doctor} value={doctor}>
+                    {doctor}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters}>
+                <XCircle size={16} className="inline mr-2" />
+                Clear Filters
+              </Button>
+            )}
           </div>
 
           {/* Table */}
@@ -366,7 +475,7 @@ export const PatientsList: React.FC = () => {
                     Surgery
                   </th>
                   <th className="text-left px-6 py-4 text-[#475569]">
-                    Risk Level
+                    Priority Level
                   </th>
                   <th className="text-left px-6 py-4 text-[#475569]">Status</th>
                   <th className="text-left px-6 py-4 text-[#475569]">Action</th>
@@ -379,7 +488,11 @@ export const PatientsList: React.FC = () => {
                       colSpan={7}
                       className="px-6 py-8 text-center text-[#475569]"
                     >
-                      No patients found matching "{searchTerm}"
+                      {hasActiveFilters
+                        ? `No patients found matching your filters${
+                            searchTerm ? ` "${searchTerm}"` : ""
+                          }`
+                        : "No patients available"}
                     </td>
                   </tr>
                 ) : (
@@ -402,8 +515,8 @@ export const PatientsList: React.FC = () => {
                         {patient.surgery}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={getRiskBadge(patient.risk)}>
-                          {patient.risk}
+                        <Badge variant={getPriorityBadge(patient.priority)}>
+                          {patient.priority}
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
@@ -414,7 +527,7 @@ export const PatientsList: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="outline"
+                            variant="primary"
                             onClick={() => navigate(`/patient/${patient.id}`)}
                             className="py-2"
                           >
@@ -422,10 +535,10 @@ export const PatientsList: React.FC = () => {
                           </Button>
                           <button
                             onClick={() => handleEditPatient(patient)}
-                            className="p-2 rounded-lg border border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] transition-colors cursor-pointer"
+                            className="p-2 rounded-lg border border-[#E2E8F0] hover:border-[#ffb703] hover:bg-[#EFF6FF] transition-colors cursor-pointer"
                             title="Edit"
                           >
-                            <Edit size={20} className="text-[#2563EB]" />
+                            <Edit size={20} className="text-[#ffb703]" />
                           </button>
                           <button
                             onClick={() => handleDeletePatient(patient.id)}
@@ -469,8 +582,7 @@ export const PatientsList: React.FC = () => {
                         phone: "",
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],
-                        ward: "",
-                        status: "pre_op",
+                        status: "in_recovery",
                         surgery_id: null,
                       });
                     }}
@@ -545,7 +657,6 @@ export const PatientsList: React.FC = () => {
                       >
                         <option value="male">Male</option>
                         <option value="female">Female</option>
-                        <option value="other">Other</option>
                       </select>
                     </div>
                   </div>
@@ -568,24 +679,6 @@ export const PatientsList: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-[#475569] mb-2">
-                        Ward *
-                      </label>
-                      <Input
-                        value={patientForm.ward}
-                        onChange={(e) =>
-                          setPatientForm({
-                            ...patientForm,
-                            ward: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., Ward A - Room 204"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[#475569] mb-2">
                         Admitted At *
                       </label>
                       <Input
@@ -599,28 +692,24 @@ export const PatientsList: React.FC = () => {
                         }
                       />
                     </div>
-                    <div>
-                      <label className="block text-[#475569] mb-2">
-                        Status *
-                      </label>
-                      <select
-                        value={patientForm.status}
-                        onChange={(e) =>
-                          setPatientForm({
-                            ...patientForm,
-                            status: e.target.value as PatientStatus,
-                          })
-                        }
-                        className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
-                      >
-                        <option value="pre_op">Pre-Op</option>
-                        <option value="in_surgery">In Surgery</option>
-                        <option value="post_op">Post-Op</option>
-                        <option value="recovery">Recovery</option>
-                        <option value="stable">Stable</option>
-                        <option value="discharged">Discharged</option>
-                      </select>
-                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[#475569] mb-2">
+                      Status *
+                    </label>
+                    <select
+                      value={patientForm.status}
+                      onChange={(e) =>
+                        setPatientForm({
+                          ...patientForm,
+                          status: e.target.value as PatientStatus,
+                        })
+                      }
+                      className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                    >
+                      <option value="in_recovery">In Recovery</option>
+                      <option value="discharged">Discharged</option>
+                    </select>
                   </div>
 
                   <div>
@@ -656,7 +745,7 @@ export const PatientsList: React.FC = () => {
                             {surgery.name} ({surgery.type}) -{" "}
                             {surgery.risk_level.charAt(0).toUpperCase() +
                               surgery.risk_level.slice(1)}{" "}
-                            Risk
+                            Priority
                           </option>
                         ))}
                       </select>
@@ -682,8 +771,7 @@ export const PatientsList: React.FC = () => {
                         phone: "",
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],
-                        ward: "",
-                        status: "pre_op",
+                        status: "in_recovery",
                         surgery_id: null,
                       });
                     }}

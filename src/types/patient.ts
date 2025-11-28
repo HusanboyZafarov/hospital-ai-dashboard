@@ -1,13 +1,6 @@
 export type Gender = "male" | "female" | "other";
 
-export type PatientStatus =
-  | "pre_op"
-  | "in_surgery"
-  | "post_op"
-  | "recovery"
-  | "in_recovery"
-  | "stable"
-  | "discharged";
+export type PatientStatus = "in_recovery" | "discharged";
 
 export type SurgeryRiskLevel = "low" | "medium" | "high";
 
@@ -25,7 +18,6 @@ export interface CreatePatientRequest {
   phone: string; // Required, maxLength: 50, minLength: 1
   assigned_doctor: string; // Required, maxLength: 255, minLength: 1
   admitted_at: string; // Required, ISO date-time string
-  ward: string; // Required, maxLength: 255, minLength: 1
   status?: PatientStatus; // Optional, default: "pre_op"
   surgery_id?: number | null; // Optional, nullable
 }
