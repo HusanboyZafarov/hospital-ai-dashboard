@@ -2,59 +2,31 @@ import React, { useState, useEffect } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Activity,
   AlertTriangle,
   CheckCircle,
-  Clock,
-  XCircle,
   Loader2,
 } from "lucide-react";
 import dashboardService from "../service/dashboard";
 
-interface DashboardStats {
-  total_patients?: number;
-  surgeries_today?: number;
-  high_risk_patients?: number;
-  appointments_today?: number;
-}
-
-interface APIAlert {
-  patient_id: number;
-  patient_name: string;
-  label: string;
-  message: string;
-  severity: "high" | "medium" | "low";
-}
-
-interface APITask {
-  patient_id: number;
-  patient_name: string;
-  task: string;
-  status: "pending" | "completed" | "overdue" | "in_progress";
+interface RecentPatient {
+  id: number;
+  full_name: string;
+  status: string;
+  surgery_name: string;
+  priority_level: "high" | "medium" | "low";
+  admitted_at: string;
 }
 
 interface DashboardData {
   total_patients?: number;
-  surgeries_today?: number;
-  high_risk_patients?: number;
-  appointments_today?: number;
-  alerts?: APIAlert[];
-  tasks?: APITask[];
-}
-
-interface MappedAlert {
-  patient: string;
-  issue: string;
-  risk: "error" | "warning";
-  color: string;
-}
-
-interface MappedTask {
-  icon: typeof CheckCircle;
-  task: string;
-  status: "success" | "warning" | "error" | "info";
+  recovery_patients?: number;
+  discharged_patients?: number;
+  high_priority_patients?: number;
+  recent_patients?: RecentPatient[];
 }
 
 const defaultStatsCards = [
@@ -66,15 +38,30 @@ const defaultStatsCards = [
     key: "total_patients",
   },
   {
+    icon: Activity,
+    title: "Tiklanishda",
+    value: "0",
+    color: "#22C55E",
+    key: "recovery_patients",
+  },
+  {
+    icon: CheckCircle,
+    title: "Chiqarilgan",
+    value: "0",
+    color: "#10B981",
+    key: "discharged_patients",
+  },
+  {
     icon: AlertTriangle,
-    title: "Yuqori xavfli bemorlar",
+    title: "Yuqori prioritetli bemorlar",
     value: "0",
     color: "#EF4444",
-    key: "high_risk_patients",
+    key: "high_priority_patients",
   },
 ];
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
@@ -96,10 +83,10 @@ export const Dashboard: React.FC = () => {
         // Set default data on error
         setDashboardData({
           total_patients: 0,
-          surgeries_today: 0,
-          high_risk_patients: 0,
-          appointments_today: 0,
-          tasks: [],
+          recovery_patients: 0,
+          discharged_patients: 0,
+          high_priority_patients: 0,
+          recent_patients: [],
         });
       } finally {
         setIsLoading(false);
@@ -118,45 +105,61 @@ export const Dashboard: React.FC = () => {
     };
   });
 
-  // Map API alerts to component format
-  const aiAlerts: MappedAlert[] = (dashboardData?.alerts || []).map((alert) => {
-    const risk = alert.severity === "high" ? "error" : "warning";
-    const color = alert.severity === "high" ? "#EF4444" : "#FACC15";
-    return {
-      patient: alert.patient_name,
-      issue: alert.message,
-      risk,
-      color,
+  // Helper function to get status display
+  const getStatusDisplay = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      in_recovery: "Tiklanishda",
+      discharged: "Chiqarilgan",
     };
-  });
+    return statusMap[status] || status;
+  };
 
-  // Map API tasks to component format
-  const mappedCareTasks: MappedTask[] = (dashboardData?.tasks || []).map(
-    (task) => {
-      let status: "success" | "warning" | "error" | "info" = "warning";
-      let Icon = Clock;
+  // Helper function to get status badge variant
+  const getStatusBadgeVariant = (
+    status: string
+  ): "success" | "warning" | "error" | "info" | "neutral" => {
+    if (status === "discharged") return "success";
+    if (status === "in_recovery") return "info";
+    return "neutral";
+  };
 
-      if (task.status === "completed") {
-        status = "success";
-        Icon = CheckCircle;
-      } else if (task.status === "overdue") {
-        status = "error";
-        Icon = XCircle;
-      } else if (task.status === "in_progress") {
-        status = "info";
-        Icon = Activity;
-      } else {
-        // pending
-        status = "warning";
-        Icon = Clock;
-      }
+  // Helper function to get priority badge variant
+  const getPriorityBadgeVariant = (
+    priority: string
+  ): "success" | "warning" | "error" => {
+    if (priority === "high") return "error";
+    if (priority === "medium") return "warning";
+    return "success";
+  };
 
-      return {
-        icon: Icon,
-        task: `${task.task} (${task.patient_name})`,
-        status,
-      };
+  // Helper function to get priority display
+  const getPriorityDisplay = (priority: string): string => {
+    const priorityMap: Record<string, string> = {
+      high: "Yuqori",
+      medium: "O'rta",
+      low: "Past",
+    };
+    return priorityMap[priority] || priority;
+  };
+
+  // Format date
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("uz-UZ", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return dateString;
     }
+  };
+
+  // Filter recent patients to only show discharged and in_recovery
+  const filteredRecentPatients = (dashboardData?.recent_patients || []).filter(
+    (patient) =>
+      patient.status === "discharged" || patient.status === "in_recovery"
   );
 
   return (
@@ -176,7 +179,7 @@ export const Dashboard: React.FC = () => {
       ) : (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-4 gap-6 mb-8">
             {statsCards.map((stat, index) => {
               const Icon = stat.icon;
               return (
@@ -202,36 +205,71 @@ export const Dashboard: React.FC = () => {
             })}
           </div>
 
-          {/* Today's Care Tasks */}
+          {/* Recent Patients */}
           <Card padding="24px">
             <h3 className="mb-4">So'nggi bemorlar</h3>
-            {mappedCareTasks.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
-                {mappedCareTasks.map((task, index) => {
-                  const Icon = task.icon;
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#F8FAFC] transition-colors"
-                    >
-                      <Icon size={20} className="text-[#2563EB] shrink-0" />
-                      <div className="flex-1 text-[#0F172A]">{task.task}</div>
-                      <Badge variant={task.status} size="sm">
-                        {task.status === "success"
-                          ? "Bajarildi"
-                          : task.status === "warning"
-                          ? "Kutilmoqda"
-                          : task.status === "error"
-                          ? "Muddat o'tgan"
-                          : "Jarayonda"}
-                      </Badge>
-                    </div>
-                  );
-                })}
+            {filteredRecentPatients.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F8FAFC]">
+                    <tr className="border-b border-[#E2E8F0]">
+                      <th className="text-left px-6 py-4 text-[#475569]">
+                        Bemor ismi
+                      </th>
+                      <th className="text-left px-6 py-4 text-[#475569]">
+                        Jarrohlik
+                      </th>
+                      <th className="text-left px-6 py-4 text-[#475569]">
+                        Prioritet
+                      </th>
+                      <th className="text-left px-6 py-4 text-[#475569]">
+                        Holat
+                      </th>
+                      <th className="text-left px-6 py-4 text-[#475569]">
+                        Qabul qilingan sana
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRecentPatients.map((patient) => (
+                      <tr
+                        key={patient.id}
+                        className="border-b border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+                        onClick={() => navigate(`/patients/${patient.id}`)}
+                      >
+                        <td className="px-6 py-4 text-[#0F172A] font-medium">
+                          {patient.full_name}
+                        </td>
+                        <td className="px-6 py-4 text-[#475569]">
+                          {patient.surgery_name || "N/A"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant={getPriorityBadgeVariant(
+                              patient.priority_level
+                            )}
+                          >
+                            {getPriorityDisplay(patient.priority_level)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant={getStatusBadgeVariant(patient.status)}
+                          >
+                            {getStatusDisplay(patient.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-[#475569]">
+                          {formatDate(patient.admitted_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="text-center py-8 text-[#475569]">
-                Parvarishlash vazifalari mavjud emas
+                So'nggi bemorlar mavjud emas
               </div>
             )}
           </Card>

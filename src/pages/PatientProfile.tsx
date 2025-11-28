@@ -282,7 +282,14 @@ const OverviewTab: React.FC<{ patient: Patient }> = ({ patient }) => {
                 {patient.surgery.type && (
                   <div>
                     <div className="text-[#475569] mb-1">Turi</div>
-                    <Badge variant="info">{patient.surgery.type}</Badge>
+                    <Badge variant="info">
+                      {typeof patient.surgery.type === "object" &&
+                      patient.surgery.type !== null
+                        ? patient.surgery.type.name
+                        : typeof patient.surgery.type === "number"
+                        ? `Type ${patient.surgery.type}`
+                        : patient.surgery.type}
+                    </Badge>
                   </div>
                 )}
                 {patient.surgery.priority_level && (
@@ -392,7 +399,14 @@ const SurgeryTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <h2>{patient.surgery.name}</h2>
           <div className="flex gap-2 mt-2">
             {patient.surgery.type && (
-              <Badge variant="info">{patient.surgery.type}</Badge>
+              <Badge variant="info">
+                {typeof patient.surgery.type === "object" &&
+                patient.surgery.type !== null
+                  ? patient.surgery.type.name
+                  : typeof patient.surgery.type === "number"
+                  ? `Type ${patient.surgery.type}`
+                  : patient.surgery.type}
+              </Badge>
             )}
             {patient.surgery.priority_level && (
               <Badge
@@ -680,13 +694,18 @@ const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 };
 
 const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
-  const dietPlan = patient.care_bundle?.diet_plan || patient.surgery?.diet_plan;
+  const dietPlan =
+    patient.care_bundle?.diet_plan ||
+    (patient.surgery?.diet_plan && patient.surgery.diet_plan !== null
+      ? patient.surgery.diet_plan
+      : null) ||
+    null;
 
   // Type guard: Check if it's CareBundleDietPlan (has summary property)
   const isCareBundleDietPlan = (
     plan: typeof dietPlan
   ): plan is import("../types/patient").CareBundleDietPlan => {
-    return plan !== undefined && "summary" in plan;
+    return plan !== undefined && plan !== null && "summary" in plan;
   };
 
   return (
@@ -833,7 +852,11 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
 const ActivitiesTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   const activityPlan =
-    patient.care_bundle?.activities || patient.surgery?.activity_plan;
+    patient.care_bundle?.activities ||
+    (patient.surgery?.activity_plan && patient.surgery.activity_plan !== null
+      ? patient.surgery.activity_plan
+      : null) ||
+    null;
 
   return (
     <div className="space-y-6">
@@ -924,6 +947,21 @@ const AIInsightsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   return (
     <div className="space-y-6">
+      {aiInsights?.risk_assessments &&
+        aiInsights.risk_assessments.length > 0 && (
+          <Card>
+            <h3 className="mb-4">Xavf baholash</h3>
+            <p className="text-[#475569] mb-4">
+              AI tomonidan aniqlangan potentsial xavflar:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-[#475569]">
+              {aiInsights.risk_assessments.map((risk, index) => (
+                <li key={index}>{risk}</li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
       {aiInsights?.predictive_analytics &&
         aiInsights.predictive_analytics.length > 0 && (
           <Card>

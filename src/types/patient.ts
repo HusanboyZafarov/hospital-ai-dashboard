@@ -4,6 +4,12 @@ export type PatientStatus = "in_recovery" | "discharged";
 
 export type SurgeryPriorityLevel = "low" | "medium" | "high";
 
+export interface SurgeryType {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export interface CreateSurgeryRequest {
   name: string; // Required, maxLength: 255, minLength: 1
   type: string; // Required, maxLength: 255, minLength: 1
@@ -56,10 +62,10 @@ export interface Surgery {
   id: number;
   name: string;
   description: string;
-  type: string;
+  type: SurgeryType | string | number; // Can be object, string, or number
   priority_level: SurgeryPriorityLevel;
-  diet_plan?: DietPlan;
-  activity_plan?: ActivityPlan;
+  diet_plan?: DietPlan | null;
+  activity_plan?: ActivityPlan | null;
 }
 
 export interface Medication {
@@ -114,8 +120,8 @@ export interface AIInsights {
 
 export interface CareBundle {
   care_plan: CarePlan;
-  diet_plan: CareBundleDietPlan;
-  activities: CareBundleActivities;
+  diet_plan?: CareBundleDietPlan;
+  activities?: CareBundleActivities;
   ai_insights: AIInsights;
   updated_at?: string;
 }

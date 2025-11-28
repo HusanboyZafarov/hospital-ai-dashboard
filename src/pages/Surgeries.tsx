@@ -25,10 +25,20 @@ interface Surgery {
 
 // Map API surgery to component format
 const mapAPISurgeryToComponent = (apiSurgery: APISurgery): Surgery => {
+  // Extract type name from object or use string/number directly
+  let category = "General";
+  if (typeof apiSurgery.type === "object" && apiSurgery.type !== null) {
+    category = apiSurgery.type.name || "General";
+  } else if (typeof apiSurgery.type === "string") {
+    category = apiSurgery.type;
+  } else if (typeof apiSurgery.type === "number") {
+    category = `Type ${apiSurgery.type}`;
+  }
+
   return {
     id: apiSurgery.id,
     name: apiSurgery.name,
-    category: apiSurgery.type || "General",
+    category,
     patientName: "N/A", // Not in API
     surgeon: "N/A", // Not in API
     date: "N/A", // Not in API
@@ -48,6 +58,8 @@ const mapComponentToAPISurgery = (
   priority_level: SurgeryPriorityLevel;
   description?: string;
 } => {
+  // When creating/updating, send the category as the type string
+  // The backend will handle mapping it to the appropriate type object
   return {
     name: surgery.name,
     type: surgery.category,
@@ -133,9 +145,11 @@ export const Surgeries: React.FC = () => {
 
   const handleEditSurgery = (surgery: Surgery) => {
     setEditingSurgeryId(surgery.id);
+    // Find the original API surgery to get the type object
+    const apiSurgery = surgeries.find((s) => s.id === surgery.id);
     setSurgeryForm({
       name: surgery.name,
-      category: surgery.category,
+      category: surgery.category, // Already mapped to type name
       patientName: surgery.patientName,
       surgeon: surgery.surgeon,
       date: surgery.date,
