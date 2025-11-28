@@ -5,6 +5,7 @@ interface CardProps {
   className?: string;
   padding?: string;
   width?: string;
+  style?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -12,6 +13,7 @@ export const Card: React.FC<CardProps> = ({
   className = "",
   padding = "24px",
   width,
+  style,
 }) => {
   return (
     <div
@@ -20,6 +22,7 @@ export const Card: React.FC<CardProps> = ({
         padding,
         boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
         width,
+        ...style,
       }}
     >
       {children}

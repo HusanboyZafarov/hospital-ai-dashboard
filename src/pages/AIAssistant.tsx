@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { MainLayout } from "../components/Layout/MainLayout";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import aiChatService from "../service/aiChat";
 
 interface Message {
   id: number;
@@ -60,53 +62,62 @@ const initialMessages: Message[] = [
 export const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userQuestion = inputValue.trim();
     const newUserMessage: Message = {
       id: messages.length + 1,
       type: "user",
-      content: inputValue,
+      content: userQuestion,
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
     };
 
-    setMessages([...messages, newUserMessage]);
+    setMessages((prev) => [...prev, newUserMessage]);
     setInputValue("");
+    setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await aiChatService.postAiChat(userQuestion);
       const aiResponse: Message = {
         id: messages.length + 2,
         type: "ai",
-        content: generateAIResponse(inputValue),
+        content:
+          response.answer ||
+          "I apologize, but I couldn't generate a response. Please try again.",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
       setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
-  };
-
-  const generateAIResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-
-    if (lowerQuery.includes("progress") || lowerQuery.includes("recovery")) {
-      return "Based on the current data, John Martinez is recovering well from his knee replacement surgery. He's 12 days post-op and showing good progress, though his recovery is slightly slower than the typical timeline. His pain management is effective, and he's participating in physical therapy. However, his blood pressure remains elevated and requires monitoring. Overall recovery estimate: 8-10 weeks for full mobility restoration.";
+    } catch (error: any) {
+      console.error("Failed to get AI response:", error);
+      const errorResponse: Message = {
+        id: messages.length + 2,
+        type: "ai",
+        content:
+          "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (lowerQuery.includes("risk") || lowerQuery.includes("danger")) {
-      return "⚠️ Current Risk Factors:\n\n1. Elevated Blood Pressure (145/92) - Requires cardiology consultation\n2. Recovery pace slightly below average - May need increased PT frequency\n3. Age factor (58) - Monitor for potential complications\n\nImmediate Action Required: None\nMonitoring Recommended: Blood pressure daily, wound site inspection, mobility assessment";
-    }
-
-    if (lowerQuery.includes("medication")) {
-      return "Current Medications Overview:\n\n✓ Oxycodone 5mg - Pain management, every 6 hours\n✓ Cephalexin 500mg - Antibiotic, twice daily\n✓ Enoxaparin 40mg - Blood thinner, once daily\n\nNo significant drug interactions detected. However, monitor patient for side effects like drowsiness and nausea. Ensure patient takes medications with food to minimize GI upset.";
-    }
-
-    return "I understand your question. Based on the patient's current condition and medical history, I recommend consulting with the primary care physician for specific guidance. I can provide general information, but personalized medical decisions should always involve the healthcare team.";
   };
 
   const handlePromptClick = (prompt: string) => {
@@ -152,12 +163,15 @@ export const AIAssistant: React.FC = () => {
 
         {/* Chat Interface */}
         <Card
-          padding="24px"
+          padding="0"
           className="flex flex-col"
-          style={{ height: "calc(100vh - 280px)" }}
+          style={{ height: "calc(100vh - 280px)", minHeight: "600px" }}
         >
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto mb-6 space-y-4">
+          {/* Messages Area - Scrollable */}
+          <div
+            className="flex-1 overflow-y-auto px-6 py-6 space-y-4"
+            style={{ minHeight: 0 }}
+          >
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -180,7 +194,66 @@ export const AIAssistant: React.FC = () => {
                       </span>
                     </div>
                   )}
-                  <div className="whitespace-pre-line">{message.content}</div>
+                  <div className="prose prose-sm max-w-none">
+                    {message.type === "ai" ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => (
+                            <p className="mb-2 last:mb-0">{children}</p>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-[#0F172A]">
+                              {children}
+                            </strong>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc list-inside mb-2 space-y-1">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal list-inside mb-2 space-y-1">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="text-[#475569]">{children}</li>
+                          ),
+                          h1: ({ children }) => (
+                            <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0">
+                              {children}
+                            </h3>
+                          ),
+                          code: ({ children }) => (
+                            <code className="bg-[#E2E8F0] px-1.5 py-0.5 rounded text-xs">
+                              {children}
+                            </code>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-4 border-[#2563EB] pl-3 italic my-2">
+                              {children}
+                            </blockquote>
+                          ),
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="whitespace-pre-line">
+                        {message.content}
+                      </div>
+                    )}
+                  </div>
                   <div
                     className={`text-[11px] mt-2 ${
                       message.type === "user"
@@ -193,10 +266,30 @@ export const AIAssistant: React.FC = () => {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[70%] rounded-[12px] px-4 py-3 bg-[#F1F5F9] text-[#0F172A]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-[#2563EB]" />
+                    <span className="text-[13px] text-[#2563EB]">
+                      AI Assistant
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Loader2
+                      className="animate-spin text-[#2563EB]"
+                      size={16}
+                    />
+                    <span className="text-[#475569]">Thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="border-t border-[#E2E8F0] pt-4">
+          {/* Input Area - Fixed at Bottom */}
+          <div className="border-t border-[#E2E8F0] px-6 py-4 bg-white shrink-0">
             <div className="flex gap-3">
               <input
                 type="text"
@@ -206,8 +299,16 @@ export const AIAssistant: React.FC = () => {
                 placeholder="Ask me anything about patient care..."
                 className="flex-1 px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
               />
-              <Button onClick={handleSend} className="px-6">
-                <Send size={18} />
+              <Button
+                onClick={handleSend}
+                className="px-6"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <Send size={18} />
+                )}
               </Button>
             </div>
             <div className="mt-3 text-[12px] text-[#475569]">

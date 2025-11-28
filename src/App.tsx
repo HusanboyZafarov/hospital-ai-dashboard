@@ -18,6 +18,7 @@ import { Appointments } from "./pages/Appointments";
 import { Surgeries } from "./pages/Surgeries";
 import { SurgeryDetail } from "./pages/SurgeryDetail";
 import SuggestionDetail from "./pages/SuggestionDetail";
+import Settings from "./pages/Settings";
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({
@@ -145,7 +146,7 @@ function AppRoutes() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Settings />
           </ProtectedRoute>
         }
       />
