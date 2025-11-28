@@ -1,14 +1,21 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { SignIn } from './pages/SignIn';
-import { Dashboard } from './pages/Dashboard';
-import { PatientsList } from './pages/PatientsList';
-import { PatientProfile } from './pages/PatientProfile';
-import { Medications } from './pages/Medications';
-import { Diet } from './pages/Diet';
-import { Activities } from './pages/Activities';
-import { AIAssistant } from './pages/AIAssistant';
-import { Appointments } from './pages/Appointments';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { SignIn } from "./pages/SignIn";
+import { Dashboard } from "./pages/Dashboard";
+import { PatientsList } from "./pages/PatientsList";
+import { PatientProfile } from "./pages/PatientProfile";
+import { Medications } from "./pages/Medications";
+import { Diet } from "./pages/Diet";
+import { Activities } from "./pages/Activities";
+import { AIAssistant } from "./pages/AIAssistant";
+import { Appointments } from "./pages/Appointments";
+
+// For push
 
 function App() {
   return (
