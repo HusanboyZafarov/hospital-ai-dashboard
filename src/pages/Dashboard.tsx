@@ -21,12 +21,6 @@ const statsCards = [
     value: "8",
     color: "#EF4444",
   },
-  {
-    icon: Calendar,
-    title: "Appointments Today",
-    value: "34",
-    color: "#22C55E",
-  },
 ];
 
 const aiAlerts = [
@@ -95,7 +89,7 @@ export const Dashboard: React.FC = () => {
       <h1 style={{ marginBottom: "32px" }}>Dashboard</h1>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-3 gap-6 mb-8">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
