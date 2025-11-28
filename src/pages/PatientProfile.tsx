@@ -24,10 +24,8 @@ import { Patient } from "../types/patient";
 const tabs = [
   { id: "overview", label: "Overview" },
   { id: "surgery", label: "Surgery" },
-  { id: "records", label: "Medical Records" },
   { id: "admission", label: "Admission" },
   { id: "care-plan", label: "Care Plan" },
-  { id: "medications", label: "Medications" },
   { id: "diet", label: "Diet" },
   { id: "activities", label: "Activities" },
   { id: "ai-insights", label: "AI Insights" },
@@ -109,6 +107,8 @@ export const PatientProfile: React.FC = () => {
   };
 
   const renderTabContent = () => {
+    if (!patient) return null;
+
     switch (activeTab) {
       case "overview":
         return <OverviewTab patient={patient} />;
@@ -678,6 +678,13 @@ const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   const dietPlan = patient.care_bundle?.diet_plan || patient.surgery?.diet_plan;
 
+  // Type guard: Check if it's CareBundleDietPlan (has summary property)
+  const isCareBundleDietPlan = (
+    plan: typeof dietPlan
+  ): plan is import("../types/patient").CareBundleDietPlan => {
+    return plan !== undefined && "summary" in plan;
+  };
+
   return (
     <div className="space-y-6">
       {dietPlan && (
@@ -685,27 +692,49 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
           <Card>
             <h3 className="mb-4">Diet Plan Summary</h3>
             <div className="space-y-3">
-              {dietPlan.diet_type && (
-                <InfoRow label="Diet Type" value={dietPlan.diet_type} />
-              )}
-              {dietPlan.goal_calories && (
-                <InfoRow
-                  label="Goal Calories"
-                  value={
-                    typeof dietPlan.goal_calories === "number"
-                      ? `${dietPlan.goal_calories} kcal/day`
-                      : dietPlan.goal_calories
-                  }
-                />
-              )}
-              {dietPlan.notes && (
-                <InfoRow label="Notes" value={dietPlan.notes} />
-              )}
-              {dietPlan.protein_target && (
-                <InfoRow
-                  label="Protein Target"
-                  value={dietPlan.protein_target}
-                />
+              {isCareBundleDietPlan(dietPlan) ? (
+                <>
+                  {dietPlan.summary.diet_type && (
+                    <InfoRow
+                      label="Diet Type"
+                      value={dietPlan.summary.diet_type}
+                    />
+                  )}
+                  {dietPlan.summary.goal_calories && (
+                    <InfoRow
+                      label="Goal Calories"
+                      value={dietPlan.summary.goal_calories}
+                    />
+                  )}
+                  {dietPlan.summary.notes && (
+                    <InfoRow label="Notes" value={dietPlan.summary.notes} />
+                  )}
+                </>
+              ) : (
+                <>
+                  {dietPlan.diet_type && (
+                    <InfoRow label="Diet Type" value={dietPlan.diet_type} />
+                  )}
+                  {dietPlan.goal_calories && (
+                    <InfoRow
+                      label="Goal Calories"
+                      value={
+                        typeof dietPlan.goal_calories === "number"
+                          ? `${dietPlan.goal_calories} kcal/day`
+                          : dietPlan.goal_calories
+                      }
+                    />
+                  )}
+                  {dietPlan.notes && (
+                    <InfoRow label="Notes" value={dietPlan.notes} />
+                  )}
+                  {dietPlan.protein_target && (
+                    <InfoRow
+                      label="Protein Target"
+                      value={dietPlan.protein_target}
+                    />
+                  )}
+                </>
               )}
             </div>
           </Card>
