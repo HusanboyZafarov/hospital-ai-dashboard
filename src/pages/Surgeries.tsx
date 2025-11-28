@@ -326,9 +326,6 @@ export const Surgeries: React.FC = () => {
                 Surgery Name
               </th>
               <th className="text-left px-6 py-4 text-[#475569]">Category</th>
-              <th className="text-left px-6 py-4 text-[#475569]">Patient</th>
-              <th className="text-left px-6 py-4 text-[#475569]">Surgeon</th>
-              <th className="text-left px-6 py-4 text-[#475569]">Date</th>
               <th className="text-left px-6 py-4 text-[#475569]">Status</th>
               <th className="text-left px-6 py-4 text-[#475569]">Risk Level</th>
               <th className="text-left px-6 py-4 text-[#475569]">Action</th>
@@ -345,11 +342,7 @@ export const Surgeries: React.FC = () => {
                   {surgery.name}
                 </td>
                 <td className="px-6 py-4 text-[#475569]">{surgery.category}</td>
-                <td className="px-6 py-4 text-[#0F172A]">
-                  {surgery.patientName}
-                </td>
-                <td className="px-6 py-4 text-[#475569]">{surgery.surgeon}</td>
-                <td className="px-6 py-4 text-[#475569]">{surgery.date}</td>
+
                 <td className="px-6 py-4">
                   <Badge variant={getStatusBadge(surgery.status)}>
                     {surgery.status}
@@ -410,52 +403,8 @@ const OverviewTab: React.FC<{ surgery: Surgery }> = ({ surgery }) => (
       </div>
 
       <div>
-        <div className="text-[#475569] mb-2">Assigned Surgeon</div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB]">
-            {surgery.surgeon
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .substring(1)}
-          </div>
-          <div className="text-[#0F172A]">{surgery.surgeon}</div>
-        </div>
-      </div>
-
-      <div>
-        <div className="text-[#475569] mb-2">Surgery Date</div>
-        <div className="text-[#0F172A]">{surgery.date}</div>
-      </div>
-
-      <div>
         <div className="text-[#475569] mb-2">Expected Duration</div>
         <div className="text-[#0F172A]">{surgery.expectedDuration}</div>
-      </div>
-
-      <div>
-        <div className="text-[#475569] mb-2">Patient</div>
-        <div className="flex items-center gap-3">
-          <User size={20} className="text-[#2563EB]" />
-          <div className="text-[#0F172A]">{surgery.patientName}</div>
-        </div>
-      </div>
-
-      <div>
-        <div className="text-[#475569] mb-2">Status</div>
-        <Badge
-          variant={
-            surgery.status === "Completed"
-              ? "success"
-              : surgery.status === "In Progress"
-              ? "warning"
-              : surgery.status === "Scheduled"
-              ? "info"
-              : "error"
-          }
-        >
-          {surgery.status}
-        </Badge>
       </div>
     </div>
   </Card>
