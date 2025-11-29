@@ -892,28 +892,30 @@ export const SurgeryDetail: React.FC = () => {
 
       {/* Medication Modal */}
       {showMedicationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <Card padding="24px" className="w-[90%] max-w-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <Card padding="20px" className="w-full max-w-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
                 {editingMedicationId
                   ? "Dorini tahrirlash"
                   : "Yangi dori qo'shish"}
-              </h2>
+              </h3>
               <button
                 onClick={() => {
                   setShowMedicationModal(false);
                   setEditingMedicationId(null);
                 }}
-                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[#F8FAFC] transition-colors"
               >
-                <X size={20} className="text-[#475569]" />
+                <X size={18} className="text-[#475569]" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-[#475569] mb-2">Dori nomi *</label>
+                <label className="block text-[13px] text-[#475569] mb-1.5 font-medium">
+                  Dori nomi *
+                </label>
                 <Input
                   value={medicationForm.name}
                   onChange={(e) =>
@@ -922,12 +924,15 @@ export const SurgeryDetail: React.FC = () => {
                       name: e.target.value,
                     })
                   }
-                  placeholder="Masalan, Aspirin"
+                  placeholder="Masalan, Cefazolin"
+                  className="h-10"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#475569] mb-2">Dozasi *</label>
+                  <label className="block text-[13px] text-[#475569] mb-1.5 font-medium">
+                    Dozasi *
+                  </label>
                   <Input
                     value={medicationForm.dosage}
                     onChange={(e) =>
@@ -936,11 +941,12 @@ export const SurgeryDetail: React.FC = () => {
                         dosage: e.target.value,
                       })
                     }
-                    placeholder="Masalan, 100mg"
+                    placeholder="Masalan, 1 g IV"
+                    className="h-10"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#475569] mb-2">
+                  <label className="block text-[13px] text-[#475569] mb-1.5 font-medium">
                     Chastotasi *
                   </label>
                   <Input
@@ -951,13 +957,14 @@ export const SurgeryDetail: React.FC = () => {
                         frequency: e.target.value,
                       })
                     }
-                    placeholder="Masalan, Kuniga 3 marta"
+                    placeholder="Masalan, every 8 hours"
+                    className="h-10"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#475569] mb-2">
+                  <label className="block text-[13px] text-[#475569] mb-1.5 font-medium">
                     Boshlanish sanasi
                   </label>
                   <Input
@@ -969,10 +976,11 @@ export const SurgeryDetail: React.FC = () => {
                         start_date: e.target.value,
                       })
                     }
+                    className="h-10"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#475569] mb-2">
+                  <label className="block text-[13px] text-[#475569] mb-1.5 font-medium">
                     Tugash sanasi
                   </label>
                   <Input
@@ -984,12 +992,13 @@ export const SurgeryDetail: React.FC = () => {
                         end_date: e.target.value,
                       })
                     }
+                    className="h-10"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 mt-5">
               <Button
                 variant="outline"
                 fullWidth
@@ -997,6 +1006,7 @@ export const SurgeryDetail: React.FC = () => {
                   setShowMedicationModal(false);
                   setEditingMedicationId(null);
                 }}
+                className="h-10"
               >
                 Bekor qilish
               </Button>
@@ -1004,10 +1014,11 @@ export const SurgeryDetail: React.FC = () => {
                 fullWidth
                 onClick={handleSaveMedication}
                 disabled={isSavingMedication}
+                className="h-10"
               >
                 {isSavingMedication ? (
                   <>
-                    <Loader2 className="animate-spin inline mr-2" size={16} />
+                    <Loader2 className="animate-spin inline mr-2" size={14} />
                     Saqlanmoqda...
                   </>
                 ) : editingMedicationId ? (

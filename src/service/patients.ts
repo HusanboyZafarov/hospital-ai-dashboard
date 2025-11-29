@@ -1,5 +1,10 @@
 import { axiosInstance } from "../jwt";
-import { CreatePatientRequest, Patient, Medication, DietPlan } from "../types/patient";
+import {
+  CreatePatientRequest,
+  Patient,
+  Medication,
+  DietPlan,
+} from "../types/patient";
 
 const getPatients = (): Promise<Patient[]> =>
   axiosInstance
@@ -19,26 +24,36 @@ const getPatient = (id: number): Promise<Patient> =>
       throw err;
     });
 
-const postPatient = (patient: CreatePatientRequest): Promise<Patient> =>
-  axiosInstance
-    .post("/patients/", patient)
+const postPatient = (patient: CreatePatientRequest): Promise<Patient> => {
+  const patientData = {
+    ...patient,
+    ward: patient.ward ?? null,
+  };
+  return axiosInstance
+    .post("/patients/", patientData)
     .then((res) => res.data)
     .catch((err) => {
       console.error("Create patient error:", err);
       throw err;
     });
+};
 
 const updatePatient = (
   id: number,
   patient: Partial<CreatePatientRequest>
-): Promise<Patient> =>
-  axiosInstance
-    .put(`/patients/${id}/`, patient)
+): Promise<Patient> => {
+  const patientData = {
+    ...patient,
+    ward: null,
+  };
+  return axiosInstance
+    .put(`/patients/${id}/`, patientData)
     .then((res) => res.data)
     .catch((err) => {
       console.error("Update patient error:", err);
       throw err;
     });
+};
 
 const deletePatient = (id: number): Promise<void> =>
   axiosInstance
@@ -71,58 +86,33 @@ const getAvailableDietPlans = (): Promise<DietPlan[]> =>
       throw err;
     });
 
-// Assign medications to patient
-// Try different formats: medication_ids, medications, or direct array
-const assignMedications = async (patientId: number, medicationIds: number[]): Promise<Patient> => {
-  // Try different field names and HTTP methods
-  const formats = [
-    { medication_ids: medicationIds },
-    { medications: medicationIds },
-    medicationIds, // Direct array
-  ];
+// Assign medication to patient
+interface AssignMedicationRequest {
+  surgery_id: number;
+  patient_id: number;
+  name: string;
+  dosage: string;
+  frequency: string;
+  start_date: string;
+  end_date: string;
+}
 
-  const methods = [
-    { method: 'post', url: `/patients/${patientId}/medications/` },
-    { method: 'put', url: `/patients/${patientId}/medications/` },
-    { method: 'patch', url: `/patients/${patientId}/medications/` },
-    { method: 'put', url: `/patients/${patientId}/` }, // Update patient directly
-    { method: 'patch', url: `/patients/${patientId}/` }, // Update patient directly
-  ];
-
-  let lastError: any = null;
-
-  for (const format of formats) {
-    for (const { method, url } of methods) {
-      try {
-        let response;
-        if (method === 'post') {
-          response = await axiosInstance.post(url, format);
-        } else if (method === 'put') {
-          response = await axiosInstance.put(url, url.includes('/medications/') ? format : { medications: medicationIds });
-        } else {
-          response = await axiosInstance.patch(url, url.includes('/medications/') ? format : { medications: medicationIds });
-        }
-        return response.data;
-      } catch (err: any) {
-        // Only log and continue if it's a 400/404/405 error
-        if (err?.response?.status === 400 || err?.response?.status === 404 || err?.response?.status === 405) {
-          lastError = err;
-          continue;
-        } else {
-          // For other errors (like 500), throw immediately
-          throw err;
-        }
-      }
-    }
-  }
-  
-  // If all formats failed, throw the last error
-  console.error("Assign medications error - tried all formats:", lastError);
-  throw lastError || new Error("Failed to assign medications with all formats");
-};
+const assignMedication = async (
+  medicationData: AssignMedicationRequest
+): Promise<Medication> =>
+  axiosInstance
+    .post(`/patients/${medicationData.patient_id}/medications/`, medicationData)
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error("Assign medication error:", err);
+      throw err;
+    });
 
 // Remove medication from patient
-const removeMedication = (patientId: number, medicationId: number): Promise<void> =>
+const removeMedication = (
+  patientId: number,
+  medicationId: number
+): Promise<void> =>
   axiosInstance
     .delete(`/patients/${patientId}/medications/${medicationId}/`)
     .then(() => {})
@@ -132,7 +122,10 @@ const removeMedication = (patientId: number, medicationId: number): Promise<void
     });
 
 // Assign diet plan to patient
-const assignDietPlan = async (patientId: number, dietPlanId: number): Promise<Patient> => {
+const assignDietPlan = async (
+  patientId: number,
+  dietPlanId: number
+): Promise<Patient> => {
   const formats = [
     { diet_plan_id: dietPlanId },
     { diet_plan: dietPlanId },
@@ -140,11 +133,11 @@ const assignDietPlan = async (patientId: number, dietPlanId: number): Promise<Pa
   ];
 
   const methods = [
-    { method: 'post', url: `/patients/${patientId}/diet-plan/` },
-    { method: 'put', url: `/patients/${patientId}/diet-plan/` },
-    { method: 'patch', url: `/patients/${patientId}/diet-plan/` },
-    { method: 'put', url: `/patients/${patientId}/` }, // Update patient directly
-    { method: 'patch', url: `/patients/${patientId}/` }, // Update patient directly
+    { method: "post", url: `/patients/${patientId}/diet-plan/` },
+    { method: "put", url: `/patients/${patientId}/diet-plan/` },
+    { method: "patch", url: `/patients/${patientId}/diet-plan/` },
+    { method: "put", url: `/patients/${patientId}/` }, // Update patient directly
+    { method: "patch", url: `/patients/${patientId}/` }, // Update patient directly
   ];
 
   let lastError: any = null;
@@ -153,17 +146,27 @@ const assignDietPlan = async (patientId: number, dietPlanId: number): Promise<Pa
     for (const { method, url } of methods) {
       try {
         let response;
-        if (method === 'post') {
+        if (method === "post") {
           response = await axiosInstance.post(url, format);
-        } else if (method === 'put') {
-          response = await axiosInstance.put(url, url.includes('/diet-plan/') ? format : { diet_plan_id: dietPlanId });
+        } else if (method === "put") {
+          response = await axiosInstance.put(
+            url,
+            url.includes("/diet-plan/") ? format : { diet_plan_id: dietPlanId }
+          );
         } else {
-          response = await axiosInstance.patch(url, url.includes('/diet-plan/') ? format : { diet_plan_id: dietPlanId });
+          response = await axiosInstance.patch(
+            url,
+            url.includes("/diet-plan/") ? format : { diet_plan_id: dietPlanId }
+          );
         }
         return response.data;
       } catch (err: any) {
         // Only log and continue if it's a 400/404/405 error
-        if (err?.response?.status === 400 || err?.response?.status === 404 || err?.response?.status === 405) {
+        if (
+          err?.response?.status === 400 ||
+          err?.response?.status === 404 ||
+          err?.response?.status === 405
+        ) {
           lastError = err;
           continue;
         } else {
@@ -173,7 +176,7 @@ const assignDietPlan = async (patientId: number, dietPlanId: number): Promise<Pa
       }
     }
   }
-  
+
   // If all formats failed, throw the last error
   console.error("Assign diet plan error - tried all formats:", lastError);
   throw lastError || new Error("Failed to assign diet plan with all formats");
@@ -197,7 +200,7 @@ const patientsService = {
   deletePatient,
   getAvailableMedications,
   getAvailableDietPlans,
-  assignMedications,
+  assignMedication,
   removeMedication,
   assignDietPlan,
   removeDietPlan,

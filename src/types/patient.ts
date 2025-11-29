@@ -26,6 +26,7 @@ export interface CreatePatientRequest {
   admitted_at: string; // Required, ISO date-time string
   status?: PatientStatus; // Optional, default: "pre_op"
   surgery_id?: number | null; // Optional, nullable
+  ward?: string | null; // Optional, nullable, default: null
 }
 
 export interface Food {

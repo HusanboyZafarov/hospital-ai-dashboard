@@ -310,7 +310,7 @@ export const AIAssistant: React.FC = () => {
                 {isLoading ? (
                   <Loader2 className="animate-spin" size={18} />
                 ) : (
-                  <Send size={18} />
+                <Send size={18} />
                 )}
               </Button>
             </div>

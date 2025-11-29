@@ -23,8 +23,8 @@ import {
   Check,
 } from "lucide-react";
 import patientsService from "../service/patients";
-import surgeriesService from "../service/surgeries";
-import { Patient, Medication, DietPlan } from "../types/patient";
+import { Patient } from "../types/patient";
+import profileSideService from "../service/profile_side";
 
 const tabs = [
   { id: "overview", label: "Umumiy ko'rinish" },
@@ -44,23 +44,65 @@ export const PatientProfile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Available options for selection
-  const [availableMedications, setAvailableMedications] = useState<
-    Medication[]
-  >([]);
-  const [availableDietPlans, setAvailableDietPlans] = useState<DietPlan[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-
   // Selection modals
   const [showMedicationSelector, setShowMedicationSelector] = useState(false);
   const [showDietSelector, setShowDietSelector] = useState(false);
   const [selectedMedicationIds, setSelectedMedicationIds] = useState<number[]>(
     []
   );
-  const [selectedDietPlanId, setSelectedDietPlanId] = useState<number | null>(
-    null
-  );
   const [isSaving, setIsSaving] = useState(false);
+
+  // Medication form for creating new medication assignment
+  const [medicationForm, setMedicationForm] = useState<{
+    surgery_id: number | null;
+    name: string;
+    dosage: string;
+    frequency: string;
+    start_date: string;
+    end_date: string;
+  }>({
+    surgery_id: null,
+    name: "",
+    dosage: "",
+    frequency: "",
+    start_date: "",
+    end_date: "",
+  });
+
+  // Diet plan form for creating new diet plan
+  const [dietPlanForm, setDietPlanForm] = useState<{
+    summary: string;
+    diet_type: string;
+    goal_calories: string;
+    protein_target: string;
+    notes: string;
+    allowed_foods: Array<{ name: string; description: string }>;
+    forbidden_foods: Array<{ name: string; description: string }>;
+    meal_plan: Array<{ meal_type: string; description: string; time: string }>;
+  }>({
+    summary: "",
+    diet_type: "",
+    goal_calories: "",
+    protein_target: "",
+    notes: "",
+    allowed_foods: [],
+    forbidden_foods: [],
+    meal_plan: [],
+  });
+
+  const [newAllowedFood, setNewAllowedFood] = useState({
+    name: "",
+    description: "",
+  });
+  const [newForbiddenFood, setNewForbiddenFood] = useState({
+    name: "",
+    description: "",
+  });
+  const [newMealPlan, setNewMealPlan] = useState({
+    meal_type: "",
+    description: "",
+    time: "",
+  });
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -75,6 +117,11 @@ export const PatientProfile: React.FC = () => {
       try {
         const patientData = await patientsService.getPatient(parseInt(id));
         setPatient(patientData);
+        // Update medication form with patient's surgery_id
+        setMedicationForm((prev) => ({
+          ...prev,
+          surgery_id: patientData.surgery?.id || null,
+        }));
       } catch (err: any) {
         console.error("Failed to fetch patient:", err);
         setError(
@@ -88,38 +135,6 @@ export const PatientProfile: React.FC = () => {
     fetchPatient();
   }, [id]);
 
-  // Fetch available options from surgeries
-  const fetchAvailableOptions = async () => {
-    setIsLoadingOptions(true);
-    try {
-      const surgeries = await surgeriesService.getSurgeries();
-      const allMedications: Medication[] = [];
-      const allDietPlans: DietPlan[] = [];
-
-      // Collect medications and diet plans from all surgeries
-      for (const surgery of surgeries) {
-        if (surgery.diet_plan) {
-          allDietPlans.push(surgery.diet_plan);
-        }
-        try {
-          const meds = await surgeriesService
-            .getMedications(surgery.id)
-            .catch(() => []);
-          allMedications.push(...meds);
-        } catch {
-          // Skip if medications can't be fetched
-        }
-      }
-
-      setAvailableMedications(allMedications);
-      setAvailableDietPlans(allDietPlans);
-    } catch (err) {
-      console.error("Failed to fetch available options:", err);
-    } finally {
-      setIsLoadingOptions(false);
-    }
-  };
-
   const refreshPatient = async () => {
     if (!id) return;
     try {
@@ -132,24 +147,65 @@ export const PatientProfile: React.FC = () => {
 
   // Medication selection handlers
   const handleOpenMedicationSelector = async () => {
-    await fetchAvailableOptions();
-    setSelectedMedicationIds(patient?.medications?.map((m) => m.id) || []);
+    // Reset form with patient's surgery_id
+    setMedicationForm({
+      surgery_id: patient?.surgery?.id || null,
+      name: "",
+      dosage: "",
+      frequency: "",
+      start_date: "",
+      end_date: "",
+    });
     setShowMedicationSelector(true);
   };
 
-  const handleSaveMedications = async () => {
+  const handleSaveMedication = async () => {
     if (!id) return;
+
+    // Validation
+    if (!medicationForm.surgery_id) {
+      alert("Iltimos, jarrohlikni tanlang");
+      return;
+    }
+    if (
+      !medicationForm.name ||
+      !medicationForm.dosage ||
+      !medicationForm.frequency
+    ) {
+      alert("Iltimos, barcha majburiy maydonlarni to'ldiring");
+      return;
+    }
+    if (!medicationForm.start_date || !medicationForm.end_date) {
+      alert("Iltimos, boshlanish va tugash sanalarini kiriting");
+      return;
+    }
+
     try {
       setIsSaving(true);
-      // Send all selected medication IDs at once
-      await patientsService.assignMedications(
-        parseInt(id),
-        selectedMedicationIds
-      );
+      const medicationData = {
+        surgery_id: medicationForm.surgery_id,
+        patient_id: parseInt(id),
+        name: medicationForm.name,
+        dosage: medicationForm.dosage,
+        frequency: medicationForm.frequency,
+        start_date: medicationForm.start_date,
+        end_date: medicationForm.end_date,
+      };
+
+      await profileSideService.postMedication(medicationData);
       await refreshPatient();
       setShowMedicationSelector(false);
+      // Reset form
+      setMedicationForm({
+        surgery_id: patient?.surgery?.id || null,
+        name: "",
+        dosage: "",
+        frequency: "",
+        start_date: "",
+        end_date: "",
+      });
     } catch (err: any) {
-      console.error("Failed to save medications:", err);
+      console.error("Failed to save medication:", err);
       console.error("Error details:", err?.response?.data);
       const errorMessage =
         err?.response?.data?.detail ||
@@ -159,7 +215,7 @@ export const PatientProfile: React.FC = () => {
           ? err.response.data.join(", ")
           : "") ||
         err?.message ||
-        "Dorilarni saqlashda xatolik yuz berdi.";
+        "Dorini saqlashda xatolik yuz berdi.";
       alert(errorMessage);
     } finally {
       setIsSaving(false);
@@ -179,24 +235,76 @@ export const PatientProfile: React.FC = () => {
     }
   };
 
-  // Diet plan selection handlers
-  const handleOpenDietSelector = async () => {
-    await fetchAvailableOptions();
-    const currentDietPlan =
-      patient?.care_bundle?.diet_plan || patient?.surgery?.diet_plan;
-    if (currentDietPlan && "id" in currentDietPlan) {
-      setSelectedDietPlanId((currentDietPlan as DietPlan).id);
-    }
+  // Diet plan creation handlers
+  const handleOpenDietSelector = () => {
+    // Reset form
+    setDietPlanForm({
+      summary: "",
+      diet_type: "",
+      goal_calories: "",
+      protein_target: "",
+      notes: "",
+      allowed_foods: [],
+      forbidden_foods: [],
+      meal_plan: [],
+    });
+    setNewAllowedFood({ name: "", description: "" });
+    setNewForbiddenFood({ name: "", description: "" });
+    setNewMealPlan({ meal_type: "", description: "", time: "" });
     setShowDietSelector(true);
   };
 
   const handleSaveDietPlan = async () => {
-    if (!id || !selectedDietPlanId) return;
+    if (!id) return;
+
+    // Validation
+    if (
+      !dietPlanForm.summary ||
+      !dietPlanForm.diet_type ||
+      !dietPlanForm.goal_calories
+    ) {
+      alert(
+        "Iltimos, barcha majburiy maydonlarni to'ldiring (Xulosa, Dieta turi, Maqsadli kaloriya)"
+      );
+      return;
+    }
+
     try {
       setIsSaving(true);
-      await patientsService.assignDietPlan(parseInt(id), selectedDietPlanId);
+      const dietPlanData = {
+        summary: dietPlanForm.summary,
+        diet_type: dietPlanForm.diet_type,
+        goal_calories: parseInt(dietPlanForm.goal_calories),
+        protein_target: dietPlanForm.protein_target || undefined,
+        notes: dietPlanForm.notes || undefined,
+        allowed_foods:
+          dietPlanForm.allowed_foods.length > 0
+            ? dietPlanForm.allowed_foods
+            : undefined,
+        forbidden_foods:
+          dietPlanForm.forbidden_foods.length > 0
+            ? dietPlanForm.forbidden_foods
+            : undefined,
+        meal_plan:
+          dietPlanForm.meal_plan.length > 0
+            ? dietPlanForm.meal_plan
+            : undefined,
+      };
+
+      await profileSideService.postDietPlan(dietPlanData);
       await refreshPatient();
       setShowDietSelector(false);
+      // Reset form
+      setDietPlanForm({
+        summary: "",
+        diet_type: "",
+        goal_calories: "",
+        protein_target: "",
+        notes: "",
+        allowed_foods: [],
+        forbidden_foods: [],
+        meal_plan: [],
+      });
     } catch (err: any) {
       console.error("Failed to save diet plan:", err);
       console.error("Error details:", err?.response?.data);
@@ -392,185 +500,509 @@ export const PatientProfile: React.FC = () => {
               </button>
             </div>
 
-            {isLoadingOptions ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="animate-spin text-[#2563EB]" size={32} />
-              </div>
-            ) : (
+            <div className="space-y-4">
               <div className="space-y-4">
-                <div className="max-h-[400px] overflow-y-auto space-y-2">
-                  {availableMedications.length > 0 ? (
-                    availableMedications.map((medication) => (
-                      <label
-                        key={medication.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedMedicationIds.includes(
-                            medication.id
-                          )}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedMedicationIds([
-                                ...selectedMedicationIds,
-                                medication.id,
-                              ]);
-                            } else {
-                              setSelectedMedicationIds(
-                                selectedMedicationIds.filter(
-                                  (id) => id !== medication.id
-                                )
-                              );
-                            }
-                          }}
-                          className="w-5 h-5 rounded border-[#E2E8F0] text-[#2563EB] focus:ring-2 focus:ring-[#2563EB]"
-                        />
-                        <div className="flex-1">
-                          <div className="text-[#0F172A] font-medium">
-                            {medication.name}
-                          </div>
-                          <div className="text-[14px] text-[#475569]">
-                            {medication.dosage} • {medication.frequency}
-                          </div>
-                        </div>
-                      </label>
-                    ))
-                  ) : (
-                    <div className="text-[#475569] text-center py-8">
-                      Mavjud dorilar topilmadi
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Jarrohlik *
+                  </label>
+                  <select
+                    value={medicationForm.surgery_id || ""}
+                    onChange={(e) =>
+                      setMedicationForm({
+                        ...medicationForm,
+                        surgery_id: e.target.value
+                          ? parseInt(e.target.value)
+                          : null,
+                      })
+                    }
+                    className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                  >
+                    <option value="">Jarrohlikni tanlang</option>
+                    {patient?.surgery && (
+                      <option value={patient.surgery.id}>
+                        {patient.surgery.name}
+                      </option>
+                    )}
+                  </select>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-[#E2E8F0]">
-                  <Button
-                    variant="outline"
-                    fullWidth
-                    onClick={() => setShowMedicationSelector(false)}
-                  >
-                    Bekor qilish
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={handleSaveMedications}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2
-                          className="animate-spin inline mr-2"
-                          size={16}
-                        />
-                        Saqlanmoqda...
-                      </>
-                    ) : (
-                      "Saqlash"
-                    )}
-                  </Button>
+                <div>
+                  <label className="block text-[#475569] mb-2">
+                    Dori nomi *
+                  </label>
+                  <Input
+                    value={medicationForm.name}
+                    onChange={(e) =>
+                      setMedicationForm({
+                        ...medicationForm,
+                        name: e.target.value,
+                      })
+                    }
+                    placeholder="Masalan, Cefazolin"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[#475569] mb-2">
+                      Dozasi *
+                    </label>
+                    <Input
+                      value={medicationForm.dosage}
+                      onChange={(e) =>
+                        setMedicationForm({
+                          ...medicationForm,
+                          dosage: e.target.value,
+                        })
+                      }
+                      placeholder="Masalan, 1 g IV"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#475569] mb-2">
+                      Chastotasi *
+                    </label>
+                    <Input
+                      value={medicationForm.frequency}
+                      onChange={(e) =>
+                        setMedicationForm({
+                          ...medicationForm,
+                          frequency: e.target.value,
+                        })
+                      }
+                      placeholder="Masalan, every 8 hours"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[#475569] mb-2">
+                      Boshlanish sanasi *
+                    </label>
+                    <Input
+                      type="date"
+                      value={medicationForm.start_date}
+                      onChange={(e) =>
+                        setMedicationForm({
+                          ...medicationForm,
+                          start_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#475569] mb-2">
+                      Tugash sanasi *
+                    </label>
+                    <Input
+                      type="date"
+                      value={medicationForm.end_date}
+                      onChange={(e) =>
+                        setMedicationForm({
+                          ...medicationForm,
+                          end_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            )}
+
+              <div className="flex gap-3 pt-4 border-t border-[#E2E8F0]">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => {
+                    setShowMedicationSelector(false);
+                    setMedicationForm({
+                      surgery_id: patient?.surgery?.id || null,
+                      name: "",
+                      dosage: "",
+                      frequency: "",
+                      start_date: "",
+                      end_date: "",
+                    });
+                  }}
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  fullWidth
+                  onClick={handleSaveMedication}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="animate-spin inline mr-2" size={16} />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    "Saqlash"
+                  )}
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}
 
-      {/* Diet Plan Selector Modal */}
+      {/* Diet Plan Creation Modal */}
       {showDietSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <Card
-            padding="24px"
-            className="w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto"
+            padding="16px"
+            className="w-[90%] max-w-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2>Dieta rejasini tanlash</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Yangi dieta rejasi</h3>
               <button
                 onClick={() => setShowDietSelector(false)}
-                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[#F8FAFC] transition-colors"
               >
-                <X size={20} className="text-[#475569]" />
+                <X size={18} className="text-[#475569]" />
               </button>
             </div>
 
-            {isLoadingOptions ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="animate-spin text-[#2563EB]" size={32} />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[#475569] text-[13px] mb-1.5">
+                  Xulosa *
+                </label>
+                <textarea
+                  value={dietPlanForm.summary}
+                  onChange={(e) =>
+                    setDietPlanForm({
+                      ...dietPlanForm,
+                      summary: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white"
+                  rows={2}
+                  placeholder="Dieta rejasi xulosasi"
+                />
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="max-h-[400px] overflow-y-auto space-y-2">
-                  {availableDietPlans.length > 0 ? (
-                    availableDietPlans.map((dietPlan) => (
-                      <label
-                        key={dietPlan.id}
-                        className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                          selectedDietPlanId === dietPlan.id
-                            ? "border-[#2563EB] bg-[#EFF6FF]"
-                            : "border-[#E2E8F0] hover:bg-[#F8FAFC]"
-                        }`}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#475569] text-[13px] mb-1.5">
+                    Dieta turi *
+                  </label>
+                  <Input
+                    value={dietPlanForm.diet_type}
+                    onChange={(e) =>
+                      setDietPlanForm({
+                        ...dietPlanForm,
+                        diet_type: e.target.value,
+                      })
+                    }
+                    placeholder="Masalan, Past natriy"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#475569] text-[13px] mb-1.5">
+                    Maqsadli kaloriya *
+                  </label>
+                  <Input
+                    type="number"
+                    value={dietPlanForm.goal_calories}
+                    onChange={(e) =>
+                      setDietPlanForm({
+                        ...dietPlanForm,
+                        goal_calories: e.target.value,
+                      })
+                    }
+                    placeholder="2000"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#475569] text-[13px] mb-1.5">
+                  Protein maqsadi
+                </label>
+                <Input
+                  value={dietPlanForm.protein_target}
+                  onChange={(e) =>
+                    setDietPlanForm({
+                      ...dietPlanForm,
+                      protein_target: e.target.value,
+                    })
+                  }
+                  placeholder="Masalan, 100g/kun"
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#475569] text-[13px] mb-1.5">
+                  Eslatmalar
+                </label>
+                <textarea
+                  value={dietPlanForm.notes}
+                  onChange={(e) =>
+                    setDietPlanForm({ ...dietPlanForm, notes: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E8F0] bg-white"
+                  rows={2}
+                  placeholder="Qo'shimcha eslatmalar"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#475569] text-[13px] mb-1.5">
+                    Ruxsat etilgan ovqatlar
+                  </label>
+                  <div className="flex gap-1.5 mb-1.5">
+                    <Input
+                      value={newAllowedFood.name}
+                      onChange={(e) =>
+                        setNewAllowedFood({
+                          ...newAllowedFood,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="Ovqat nomi"
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (newAllowedFood.name.trim()) {
+                          setDietPlanForm({
+                            ...dietPlanForm,
+                            allowed_foods: [
+                              ...dietPlanForm.allowed_foods,
+                              {
+                                name: newAllowedFood.name.trim(),
+                                description:
+                                  newAllowedFood.description.trim() || "",
+                              },
+                            ],
+                          });
+                          setNewAllowedFood({ name: "", description: "" });
+                        }
+                      }}
+                      className="h-8 px-2"
+                    >
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                  <ul className="space-y-0.5 max-h-24 overflow-y-auto text-xs">
+                    {dietPlanForm.allowed_foods.map((food, index) => (
+                      <li
+                        key={index}
+                        className="flex items-center justify-between px-2 py-1 bg-[#F0FDF4] rounded text-[#166534]"
                       >
-                        <input
-                          type="radio"
-                          name="dietPlan"
-                          checked={selectedDietPlanId === dietPlan.id}
-                          onChange={() => setSelectedDietPlanId(dietPlan.id)}
-                          className="w-5 h-5 border-[#E2E8F0] text-[#2563EB] focus:ring-2 focus:ring-[#2563EB]"
-                        />
-                        <div className="flex-1">
-                          <div className="text-[#0F172A] font-medium mb-1">
-                            {dietPlan.diet_type}
-                          </div>
-                          <div className="text-[14px] text-[#475569]">
-                            Maqsadli kaloriya: {dietPlan.goal_calories} kcal/kun
-                            {dietPlan.protein_target &&
-                              ` • Protein: ${dietPlan.protein_target}`}
-                          </div>
-                          {dietPlan.summary && (
-                            <div className="text-[13px] text-[#475569] mt-1">
-                              {dietPlan.summary}
-                            </div>
-                          )}
-                        </div>
-                        {selectedDietPlanId === dietPlan.id && (
-                          <Check size={20} className="text-[#2563EB]" />
-                        )}
-                      </label>
-                    ))
-                  ) : (
-                    <div className="text-[#475569] text-center py-8">
-                      Mavjud dieta rejalari topilmadi
-                    </div>
-                  )}
+                        <span className="truncate">{food.name}</span>
+                        <button
+                          onClick={() => {
+                            setDietPlanForm({
+                              ...dietPlanForm,
+                              allowed_foods: dietPlanForm.allowed_foods.filter(
+                                (_, i) => i !== index
+                              ),
+                            });
+                          }}
+                        >
+                          <X size={12} className="text-[#EF4444]" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-[#E2E8F0]">
-                  <Button
-                    variant="outline"
-                    fullWidth
-                    onClick={() => setShowDietSelector(false)}
-                  >
-                    Bekor qilish
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={handleSaveDietPlan}
-                    disabled={isSaving || !selectedDietPlanId}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2
-                          className="animate-spin inline mr-2"
-                          size={16}
-                        />
-                        Saqlanmoqda...
-                      </>
-                    ) : (
-                      "Saqlash"
-                    )}
-                  </Button>
+                <div>
+                  <label className="block text-[#475569] text-[13px] mb-1.5">
+                    Taqiqlangan ovqatlar
+                  </label>
+                  <div className="flex gap-1.5 mb-1.5">
+                    <Input
+                      value={newForbiddenFood.name}
+                      onChange={(e) =>
+                        setNewForbiddenFood({
+                          ...newForbiddenFood,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="Ovqat nomi"
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (newForbiddenFood.name.trim()) {
+                          setDietPlanForm({
+                            ...dietPlanForm,
+                            forbidden_foods: [
+                              ...dietPlanForm.forbidden_foods,
+                              {
+                                name: newForbiddenFood.name.trim(),
+                                description:
+                                  newForbiddenFood.description.trim() || "",
+                              },
+                            ],
+                          });
+                          setNewForbiddenFood({ name: "", description: "" });
+                        }
+                      }}
+                      className="h-8 px-2"
+                    >
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                  <ul className="space-y-0.5 max-h-24 overflow-y-auto text-xs">
+                    {dietPlanForm.forbidden_foods.map((food, index) => (
+                      <li
+                        key={index}
+                        className="flex items-center justify-between px-2 py-1 bg-[#FEF2F2] rounded text-[#991B1B]"
+                      >
+                        <span className="truncate">{food.name}</span>
+                        <button
+                          onClick={() => {
+                            setDietPlanForm({
+                              ...dietPlanForm,
+                              forbidden_foods:
+                                dietPlanForm.forbidden_foods.filter(
+                                  (_, i) => i !== index
+                                ),
+                            });
+                          }}
+                        >
+                          <X size={12} className="text-[#EF4444]" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-            )}
+
+              <div>
+                <label className="block text-[#475569] text-[13px] mb-1.5">
+                  Ovqatlanish rejasi
+                </label>
+                <div className="flex gap-1.5 mb-1.5">
+                  <Input
+                    value={newMealPlan.meal_type}
+                    onChange={(e) =>
+                      setNewMealPlan({
+                        ...newMealPlan,
+                        meal_type: e.target.value,
+                      })
+                    }
+                    placeholder="Ovqat turi"
+                    className="flex-1 h-8 text-sm"
+                  />
+                  <Input
+                    value={newMealPlan.description}
+                    onChange={(e) =>
+                      setNewMealPlan({
+                        ...newMealPlan,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Tavsif *"
+                    className="flex-1 h-8 text-sm"
+                  />
+                  <Input
+                    type="time"
+                    value={newMealPlan.time}
+                    onChange={(e) =>
+                      setNewMealPlan({
+                        ...newMealPlan,
+                        time: e.target.value,
+                      })
+                    }
+                    className="w-24 h-8 text-sm"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (
+                        newMealPlan.meal_type.trim() &&
+                        newMealPlan.description.trim()
+                      ) {
+                        setDietPlanForm({
+                          ...dietPlanForm,
+                          meal_plan: [
+                            ...dietPlanForm.meal_plan,
+                            {
+                              meal_type: newMealPlan.meal_type.trim(),
+                              description: newMealPlan.description.trim(),
+                              time: newMealPlan.time || "",
+                            },
+                          ],
+                        });
+                        setNewMealPlan({
+                          meal_type: "",
+                          description: "",
+                          time: "",
+                        });
+                      }
+                    }}
+                    className="h-8 px-2"
+                  >
+                    <Plus size={14} />
+                  </Button>
+                </div>
+                <ul className="space-y-0.5 max-h-24 overflow-y-auto text-xs">
+                  {dietPlanForm.meal_plan.map((meal, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center justify-between px-2 py-1 bg-[#F8FAFC] rounded border border-[#E2E8F0] text-[#0F172A]"
+                    >
+                      <span className="truncate">
+                        <strong>{meal.meal_type}</strong> - {meal.description}
+                        {meal.time && (
+                          <span className="text-[#475569] ml-1">
+                            ({meal.time})
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setDietPlanForm({
+                            ...dietPlanForm,
+                            meal_plan: dietPlanForm.meal_plan.filter(
+                              (_, i) => i !== index
+                            ),
+                          });
+                        }}
+                      >
+                        <X size={12} className="text-[#EF4444]" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-[#E2E8F0]">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => setShowDietSelector(false)}
+                  className="h-9"
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  fullWidth
+                  onClick={handleSaveDietPlan}
+                  disabled={isSaving}
+                  className="h-9"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="animate-spin inline mr-2" size={14} />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    "Yaratish"
+                  )}
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}

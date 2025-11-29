@@ -1,5 +1,10 @@
 import { axiosInstance } from "../jwt";
-import { CreateSurgeryRequest, Surgery, DietPlan, Medication } from "../types/patient";
+import {
+  CreateSurgeryRequest,
+  Surgery,
+  DietPlan,
+  Medication,
+} from "../types/patient";
 
 const getSurgeries = (): Promise<Surgery[]> =>
   axiosInstance
@@ -62,7 +67,10 @@ interface CreateDietPlanRequest {
   forbidden_foods?: Array<{ name: string; description?: string }>;
 }
 
-const createDietPlan = (surgeryId: number, dietPlan: CreateDietPlanRequest): Promise<DietPlan> =>
+const createDietPlan = (
+  surgeryId: number,
+  dietPlan: CreateDietPlanRequest
+): Promise<DietPlan> =>
   axiosInstance
     .post(`/surgeries/${surgeryId}/diet-plan/`, dietPlan)
     .then((res) => res.data)
@@ -71,7 +79,10 @@ const createDietPlan = (surgeryId: number, dietPlan: CreateDietPlanRequest): Pro
       throw err;
     });
 
-const updateDietPlan = (surgeryId: number, dietPlan: CreateDietPlanRequest): Promise<DietPlan> =>
+const updateDietPlan = (
+  surgeryId: number,
+  dietPlan: CreateDietPlanRequest
+): Promise<DietPlan> =>
   axiosInstance
     .put(`/surgeries/${surgeryId}/diet-plan/`, dietPlan)
     .then((res) => res.data)
@@ -99,7 +110,10 @@ const getMedications = (surgeryId: number): Promise<Medication[]> =>
       throw err;
     });
 
-const createMedication = (surgeryId: number, medication: Partial<Medication>): Promise<Medication> =>
+const createMedication = (
+  surgeryId: number,
+  medication: Partial<Medication>
+): Promise<Medication> =>
   axiosInstance
     .post(`/surgeries/${surgeryId}/medications/`, medication)
     .then((res) => res.data)
@@ -108,7 +122,11 @@ const createMedication = (surgeryId: number, medication: Partial<Medication>): P
       throw err;
     });
 
-const updateMedication = (surgeryId: number, medicationId: number, medication: Partial<Medication>): Promise<Medication> =>
+const updateMedication = (
+  surgeryId: number,
+  medicationId: number,
+  medication: Partial<Medication>
+): Promise<Medication> =>
   axiosInstance
     .put(`/surgeries/${surgeryId}/medications/${medicationId}/`, medication)
     .then((res) => res.data)
@@ -117,7 +135,10 @@ const updateMedication = (surgeryId: number, medicationId: number, medication: P
       throw err;
     });
 
-const deleteMedication = (surgeryId: number, medicationId: number): Promise<void> =>
+const deleteMedication = (
+  surgeryId: number,
+  medicationId: number
+): Promise<void> =>
   axiosInstance
     .delete(`/surgeries/${surgeryId}/medications/${medicationId}/`)
     .then(() => {})

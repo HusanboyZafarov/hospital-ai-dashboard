@@ -112,6 +112,7 @@ export const PatientsList: React.FC = () => {
     admitted_at: new Date().toISOString().split("T")[0],
     status: "in_recovery",
     surgery_id: null,
+    ward: null,
   });
 
   // Fetch patients on mount
@@ -302,6 +303,7 @@ export const PatientsList: React.FC = () => {
       admitted_at: new Date().toISOString().split("T")[0],
       status: "in_recovery",
       surgery_id: null,
+      ward: null,
     });
     setShowModal(true);
   };
@@ -321,7 +323,8 @@ export const PatientsList: React.FC = () => {
           ? new Date(apiPatient.admitted_at).toISOString().split("T")[0]
           : new Date().toISOString().split("T")[0],
         status: apiPatient.status || "in_recovery",
-        surgery_id: apiPatient.surgery_id || null,
+        surgery_id: apiPatient.surgery?.id || null,
+        ward: null,
       });
       setShowModal(true);
     } catch (err: any) {
@@ -393,6 +396,7 @@ export const PatientsList: React.FC = () => {
         admitted_at: new Date().toISOString().split("T")[0],
         status: "in_recovery",
         surgery_id: null,
+        ward: null,
       });
     } catch (err: any) {
       console.error("Failed to save patient:", err);
