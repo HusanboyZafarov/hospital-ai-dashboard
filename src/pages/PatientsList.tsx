@@ -302,7 +302,7 @@ export const PatientsList: React.FC = () => {
       assigned_doctor: "",
       admitted_at: new Date().toISOString().split("T")[0],
       status: "in_recovery",
-      surgery_id: null,
+      surgery_id: undefined,
       ward: null,
     });
     setShowModal(true);
@@ -323,7 +323,7 @@ export const PatientsList: React.FC = () => {
           ? new Date(apiPatient.admitted_at).toISOString().split("T")[0]
           : new Date().toISOString().split("T")[0],
         status: apiPatient.status || "in_recovery",
-        surgery_id: apiPatient.surgery?.id || null,
+        surgery_id: apiPatient.surgery?.id || undefined,
         ward: null,
       });
       setShowModal(true);
@@ -351,21 +351,22 @@ export const PatientsList: React.FC = () => {
       !patientForm.full_name.trim() ||
       !patientForm.phone.trim() ||
       !patientForm.assigned_doctor.trim() ||
-      patientForm.age <= 0
+      patientForm.age <= 0 ||
+      !patientForm.surgery_id ||
+      patientForm.surgery_id <= 0
     ) {
-      alert("Iltimos, barcha majburiy maydonlarni to'ldiring");
+      alert(
+        "Iltimos, barcha majburiy maydonlarni to'ldiring (shu jumladan jarrohlik)"
+      );
       return;
     }
 
     setIsSaving(true);
     try {
-      // Prepare data for API - ensure surgery_id is null if empty/invalid
+      // Prepare data for API - surgery_id is required
       const patientData: CreatePatientRequest = {
         ...patientForm,
-        surgery_id:
-          patientForm.surgery_id && patientForm.surgery_id > 0
-            ? patientForm.surgery_id
-            : null,
+        surgery_id: patientForm.surgery_id,
       };
 
       if (editingPatient) {
@@ -624,7 +625,8 @@ export const PatientsList: React.FC = () => {
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],
                         status: "in_recovery",
-                        surgery_id: null,
+                        surgery_id: undefined,
+                        ward: null,
                       });
                     }}
                     className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors cursor-pointer"
@@ -757,7 +759,7 @@ export const PatientsList: React.FC = () => {
 
                   <div>
                     <label className="block text-[#475569] mb-2">
-                      Jarrohlik (ixtiyoriy)
+                      Jarrohlik *
                     </label>
                     {isLoadingSurgeries ? (
                       <div className="flex items-center gap-2 py-3">
@@ -777,12 +779,15 @@ export const PatientsList: React.FC = () => {
                           setPatientForm({
                             ...patientForm,
                             surgery_id:
-                              value && value !== "" ? parseInt(value) : null,
+                              value && value !== ""
+                                ? parseInt(value)
+                                : undefined,
                           });
                         }}
+                        required
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
                       >
-                        <option value="">Jarrohlik tayinlanmagan</option>
+                        <option value="">Jarrohlikni tanlang *</option>
                         {surgeries.map((surgery) => {
                           // Handle surgery.type which can be object, string, or number
                           const typeDisplay =
@@ -807,8 +812,7 @@ export const PatientsList: React.FC = () => {
                       </select>
                     )}
                     <p className="text-[12px] text-[#475569] mt-1">
-                      Ro'yxatdan jarrohlikni tanlang yoki jarrohlik
-                      tayinlanmagan bo'lsa bo'sh qoldiring.
+                      Ro'yxatdan jarrohlikni tanlang (majburiy).
                     </p>
                   </div>
                 </div>
@@ -828,7 +832,8 @@ export const PatientsList: React.FC = () => {
                         assigned_doctor: "",
                         admitted_at: new Date().toISOString().split("T")[0],
                         status: "in_recovery",
-                        surgery_id: null,
+                        surgery_id: undefined,
+                        ward: null,
                       });
                     }}
                   >
