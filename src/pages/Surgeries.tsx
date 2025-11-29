@@ -463,7 +463,7 @@ export const Surgeries: React.FC = () => {
                       }
                       className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors font-medium ${
                         surgeryForm.priority_level === "medium"
-                          ? "border-orange-500 bg-orange-100 text-orange-900"
+                          ? "border-[#F59E0B] bg-[#FEF3C7] text-[#92400E]"
                           : "border-[#E2E8F0] bg-white text-[#475569]"
                       }`}
                     >
