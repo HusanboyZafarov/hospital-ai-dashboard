@@ -779,14 +779,27 @@ export const PatientsList: React.FC = () => {
                         className="w-full px-4 py-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
                       >
                         <option value="">Jarrohlik tayinlanmagan</option>
-                        {surgeries.map((surgery) => (
-                          <option key={surgery.id} value={surgery.id}>
-                            {surgery.name} ({surgery.type}) -{" "}
-                            {surgery.priority_level.charAt(0).toUpperCase() +
-                              surgery.priority_level.slice(1)}{" "}
-                            Prioritet
-                          </option>
-                        ))}
+                        {surgeries.map((surgery) => {
+                          // Handle surgery.type which can be object, string, or number
+                          const typeDisplay =
+                            typeof surgery.type === "object" &&
+                            surgery.type !== null
+                              ? surgery.type.name
+                              : typeof surgery.type === "string"
+                              ? surgery.type
+                              : typeof surgery.type === "number"
+                              ? `Type ${surgery.type}`
+                              : "N/A";
+
+                          return (
+                            <option key={surgery.id} value={surgery.id}>
+                              {surgery.name} ({typeDisplay}) -{" "}
+                              {surgery.priority_level.charAt(0).toUpperCase() +
+                                surgery.priority_level.slice(1)}{" "}
+                              Prioritet
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                     <p className="text-[12px] text-[#475569] mt-1">

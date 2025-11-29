@@ -4,6 +4,7 @@ import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Tabs } from "../components/ui/tabs";
+import { Input } from "../components/ui/input";
 import { useParams } from "react-router-dom";
 import {
   Activity,
@@ -17,15 +18,20 @@ import {
   Thermometer,
   Droplet,
   Loader2,
+  Plus,
+  X,
+  Check,
 } from "lucide-react";
 import patientsService from "../service/patients";
-import { Patient } from "../types/patient";
+import surgeriesService from "../service/surgeries";
+import { Patient, Medication, DietPlan } from "../types/patient";
 
 const tabs = [
   { id: "overview", label: "Umumiy ko'rinish" },
   { id: "surgery", label: "Jarrohlik" },
   { id: "admission", label: "Qabul qilish" },
   { id: "care-plan", label: "Parvarish rejasi" },
+  { id: "medications", label: "Dorilar" },
   { id: "diet", label: "Dieta" },
   { id: "activities", label: "Faoliyatlar" },
   { id: "ai-insights", label: "AI tahlillari" },
@@ -37,6 +43,24 @@ export const PatientProfile: React.FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Available options for selection
+  const [availableMedications, setAvailableMedications] = useState<
+    Medication[]
+  >([]);
+  const [availableDietPlans, setAvailableDietPlans] = useState<DietPlan[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+
+  // Selection modals
+  const [showMedicationSelector, setShowMedicationSelector] = useState(false);
+  const [showDietSelector, setShowDietSelector] = useState(false);
+  const [selectedMedicationIds, setSelectedMedicationIds] = useState<number[]>(
+    []
+  );
+  const [selectedDietPlanId, setSelectedDietPlanId] = useState<number | null>(
+    null
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -63,6 +87,147 @@ export const PatientProfile: React.FC = () => {
 
     fetchPatient();
   }, [id]);
+
+  // Fetch available options from surgeries
+  const fetchAvailableOptions = async () => {
+    setIsLoadingOptions(true);
+    try {
+      const surgeries = await surgeriesService.getSurgeries();
+      const allMedications: Medication[] = [];
+      const allDietPlans: DietPlan[] = [];
+
+      // Collect medications and diet plans from all surgeries
+      for (const surgery of surgeries) {
+        if (surgery.diet_plan) {
+          allDietPlans.push(surgery.diet_plan);
+        }
+        try {
+          const meds = await surgeriesService
+            .getMedications(surgery.id)
+            .catch(() => []);
+          allMedications.push(...meds);
+        } catch {
+          // Skip if medications can't be fetched
+        }
+      }
+
+      setAvailableMedications(allMedications);
+      setAvailableDietPlans(allDietPlans);
+    } catch (err) {
+      console.error("Failed to fetch available options:", err);
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  };
+
+  const refreshPatient = async () => {
+    if (!id) return;
+    try {
+      const patientData = await patientsService.getPatient(parseInt(id));
+      setPatient(patientData);
+    } catch (err) {
+      console.error("Failed to refresh patient:", err);
+    }
+  };
+
+  // Medication selection handlers
+  const handleOpenMedicationSelector = async () => {
+    await fetchAvailableOptions();
+    setSelectedMedicationIds(patient?.medications?.map((m) => m.id) || []);
+    setShowMedicationSelector(true);
+  };
+
+  const handleSaveMedications = async () => {
+    if (!id) return;
+    try {
+      setIsSaving(true);
+      // Send all selected medication IDs at once
+      await patientsService.assignMedications(
+        parseInt(id),
+        selectedMedicationIds
+      );
+      await refreshPatient();
+      setShowMedicationSelector(false);
+    } catch (err: any) {
+      console.error("Failed to save medications:", err);
+      console.error("Error details:", err?.response?.data);
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        (Array.isArray(err?.response?.data)
+          ? err.response.data.join(", ")
+          : "") ||
+        err?.message ||
+        "Dorilarni saqlashda xatolik yuz berdi.";
+      alert(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemoveMedication = async (medicationId: number) => {
+    if (!id) return;
+    if (!window.confirm("Dorini olib tashlashni tasdiqlaysizmi?")) return;
+
+    try {
+      await patientsService.removeMedication(parseInt(id), medicationId);
+      await refreshPatient();
+    } catch (err: any) {
+      console.error("Failed to remove medication:", err);
+      alert("Dorini olib tashlashda xatolik yuz berdi.");
+    }
+  };
+
+  // Diet plan selection handlers
+  const handleOpenDietSelector = async () => {
+    await fetchAvailableOptions();
+    const currentDietPlan =
+      patient?.care_bundle?.diet_plan || patient?.surgery?.diet_plan;
+    if (currentDietPlan && "id" in currentDietPlan) {
+      setSelectedDietPlanId((currentDietPlan as DietPlan).id);
+    }
+    setShowDietSelector(true);
+  };
+
+  const handleSaveDietPlan = async () => {
+    if (!id || !selectedDietPlanId) return;
+    try {
+      setIsSaving(true);
+      await patientsService.assignDietPlan(parseInt(id), selectedDietPlanId);
+      await refreshPatient();
+      setShowDietSelector(false);
+    } catch (err: any) {
+      console.error("Failed to save diet plan:", err);
+      console.error("Error details:", err?.response?.data);
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        (Array.isArray(err?.response?.data)
+          ? err.response.data.join(", ")
+          : "") ||
+        err?.message ||
+        "Dieta rejasini saqlashda xatolik yuz berdi.";
+      alert(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemoveDietPlan = async () => {
+    if (!id) return;
+    if (!window.confirm("Dieta rejasini olib tashlashni tasdiqlaysizmi?"))
+      return;
+
+    try {
+      await patientsService.removeDietPlan(parseInt(id));
+      await refreshPatient();
+    } catch (err: any) {
+      console.error("Failed to remove diet plan:", err);
+      alert("Dieta rejasini olib tashlashda xatolik yuz berdi.");
+    }
+  };
 
   // Map status to display format
   const getStatusDisplay = (status?: string) => {
@@ -131,9 +296,21 @@ export const PatientProfile: React.FC = () => {
       case "care-plan":
         return <CarePlanTab patient={patient} />;
       case "medications":
-        return <MedicationsTab patient={patient} />;
+        return (
+          <MedicationsTab
+            patient={patient}
+            onOpenSelector={handleOpenMedicationSelector}
+            onRemove={handleRemoveMedication}
+          />
+        );
       case "diet":
-        return <DietTab patient={patient} />;
+        return (
+          <DietTab
+            patient={patient}
+            onOpenSelector={handleOpenDietSelector}
+            onRemove={handleRemoveDietPlan}
+          />
+        );
       case "activities":
         return <ActivitiesTab patient={patient} />;
       case "ai-insights":
@@ -197,6 +374,206 @@ export const PatientProfile: React.FC = () => {
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {renderTabContent()}
+
+      {/* Medication Selector Modal */}
+      {showMedicationSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <Card
+            padding="24px"
+            className="w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2>Dorilarni tanlash</h2>
+              <button
+                onClick={() => setShowMedicationSelector(false)}
+                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+              >
+                <X size={20} className="text-[#475569]" />
+              </button>
+            </div>
+
+            {isLoadingOptions ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-[#2563EB]" size={32} />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="max-h-[400px] overflow-y-auto space-y-2">
+                  {availableMedications.length > 0 ? (
+                    availableMedications.map((medication) => (
+                      <label
+                        key={medication.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMedicationIds.includes(
+                            medication.id
+                          )}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedMedicationIds([
+                                ...selectedMedicationIds,
+                                medication.id,
+                              ]);
+                            } else {
+                              setSelectedMedicationIds(
+                                selectedMedicationIds.filter(
+                                  (id) => id !== medication.id
+                                )
+                              );
+                            }
+                          }}
+                          className="w-5 h-5 rounded border-[#E2E8F0] text-[#2563EB] focus:ring-2 focus:ring-[#2563EB]"
+                        />
+                        <div className="flex-1">
+                          <div className="text-[#0F172A] font-medium">
+                            {medication.name}
+                          </div>
+                          <div className="text-[14px] text-[#475569]">
+                            {medication.dosage} • {medication.frequency}
+                          </div>
+                        </div>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="text-[#475569] text-center py-8">
+                      Mavjud dorilar topilmadi
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-[#E2E8F0]">
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={() => setShowMedicationSelector(false)}
+                  >
+                    Bekor qilish
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={handleSaveMedications}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2
+                          className="animate-spin inline mr-2"
+                          size={16}
+                        />
+                        Saqlanmoqda...
+                      </>
+                    ) : (
+                      "Saqlash"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* Diet Plan Selector Modal */}
+      {showDietSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <Card
+            padding="24px"
+            className="w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2>Dieta rejasini tanlash</h2>
+              <button
+                onClick={() => setShowDietSelector(false)}
+                className="p-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+              >
+                <X size={20} className="text-[#475569]" />
+              </button>
+            </div>
+
+            {isLoadingOptions ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-[#2563EB]" size={32} />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="max-h-[400px] overflow-y-auto space-y-2">
+                  {availableDietPlans.length > 0 ? (
+                    availableDietPlans.map((dietPlan) => (
+                      <label
+                        key={dietPlan.id}
+                        className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          selectedDietPlanId === dietPlan.id
+                            ? "border-[#2563EB] bg-[#EFF6FF]"
+                            : "border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="dietPlan"
+                          checked={selectedDietPlanId === dietPlan.id}
+                          onChange={() => setSelectedDietPlanId(dietPlan.id)}
+                          className="w-5 h-5 border-[#E2E8F0] text-[#2563EB] focus:ring-2 focus:ring-[#2563EB]"
+                        />
+                        <div className="flex-1">
+                          <div className="text-[#0F172A] font-medium mb-1">
+                            {dietPlan.diet_type}
+                          </div>
+                          <div className="text-[14px] text-[#475569]">
+                            Maqsadli kaloriya: {dietPlan.goal_calories} kcal/kun
+                            {dietPlan.protein_target &&
+                              ` • Protein: ${dietPlan.protein_target}`}
+                          </div>
+                          {dietPlan.summary && (
+                            <div className="text-[13px] text-[#475569] mt-1">
+                              {dietPlan.summary}
+                            </div>
+                          )}
+                        </div>
+                        {selectedDietPlanId === dietPlan.id && (
+                          <Check size={20} className="text-[#2563EB]" />
+                        )}
+                      </label>
+                    ))
+                  ) : (
+                    <div className="text-[#475569] text-center py-8">
+                      Mavjud dieta rejalari topilmadi
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-[#E2E8F0]">
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={() => setShowDietSelector(false)}
+                  >
+                    Bekor qilish
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={handleSaveDietPlan}
+                    disabled={isSaving || !selectedDietPlanId}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2
+                          className="animate-spin inline mr-2"
+                          size={16}
+                        />
+                        Saqlanmoqda...
+                      </>
+                    ) : (
+                      "Saqlash"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
     </MainLayout>
   );
 };
@@ -627,7 +1004,11 @@ const CarePlanTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   );
 };
 
-const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
+const MedicationsTab: React.FC<{
+  patient: Patient;
+  onOpenSelector: () => void;
+  onRemove: (id: number) => void;
+}> = ({ patient, onOpenSelector, onRemove }) => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     try {
@@ -643,57 +1024,83 @@ const MedicationsTab: React.FC<{ patient: Patient }> = ({ patient }) => {
   };
 
   return (
-    <Card>
-      <h3 className="mb-4">Joriy dorilar</h3>
-      {patient.medications && patient.medications.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F8FAFC]">
-              <tr className="border-b border-[#E2E8F0]">
-                <th className="text-left px-6 py-4 text-[#475569]">Dori</th>
-                <th className="text-left px-6 py-4 text-[#475569]">Dozasi</th>
-                <th className="text-left px-6 py-4 text-[#475569]">
-                  Chastotasi
-                </th>
-                <th className="text-left px-6 py-4 text-[#475569]">
-                  Boshlanish sanasi
-                </th>
-                <th className="text-left px-6 py-4 text-[#475569]">
-                  Tugash sanasi
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {patient.medications.map((medication) => (
-                <tr
-                  key={medication.id}
-                  className="border-b border-[#E2E8F0]"
-                  style={{ height: "64px" }}
-                >
-                  <td className="px-6 py-4">{medication.name}</td>
-                  <td className="px-6 py-4">{medication.dosage}</td>
-                  <td className="px-6 py-4">{medication.frequency}</td>
-                  <td className="px-6 py-4">
-                    {formatDate(medication.start_date)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDate(medication.end_date)}
-                  </td>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3>Joriy dorilar</h3>
+        <Button onClick={onOpenSelector}>
+          <Plus size={16} className="inline mr-2" />
+          Dori qo'shish
+        </Button>
+      </div>
+      <Card>
+        {patient.medications && patient.medications.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#F8FAFC]">
+                <tr className="border-b border-[#E2E8F0]">
+                  <th className="text-left px-6 py-4 text-[#475569]">Dori</th>
+                  <th className="text-left px-6 py-4 text-[#475569]">Dozasi</th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Chastotasi
+                  </th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Boshlanish sanasi
+                  </th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Tugash sanasi
+                  </th>
+                  <th className="text-left px-6 py-4 text-[#475569]">
+                    Harakat
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-[#475569] text-center py-8">
-          Dorilar mavjud emas
-        </div>
-      )}
-    </Card>
+              </thead>
+              <tbody>
+                {patient.medications.map((medication) => (
+                  <tr key={medication.id} className="border-b border-[#E2E8F0]">
+                    <td className="px-6 py-4 text-[#0F172A] font-medium">
+                      {medication.name}
+                    </td>
+                    <td className="px-6 py-4 text-[#475569]">
+                      {medication.dosage}
+                    </td>
+                    <td className="px-6 py-4 text-[#475569]">
+                      {medication.frequency}
+                    </td>
+                    <td className="px-6 py-4 text-[#475569]">
+                      {formatDate(medication.start_date)}
+                    </td>
+                    <td className="px-6 py-4 text-[#475569]">
+                      {formatDate(medication.end_date)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => onRemove(medication.id)}
+                        className="p-2 rounded-lg border border-[#E2E8F0] hover:border-[#EF4444] hover:bg-[#FEF2F2] transition-colors"
+                        title="Olib tashlash"
+                      >
+                        <X size={16} className="text-[#EF4444]" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-[#475569] text-center py-8">
+            Dorilar mavjud emas
+          </div>
+        )}
+      </Card>
+    </div>
   );
 };
 
-const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
+const DietTab: React.FC<{
+  patient: Patient;
+  onOpenSelector: () => void;
+  onRemove: () => void;
+}> = ({ patient, onOpenSelector, onRemove }) => {
   const dietPlan =
     patient.care_bundle?.diet_plan ||
     (patient.surgery?.diet_plan && patient.surgery.diet_plan !== null
@@ -710,6 +1117,20 @@ const DietTab: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3>Dieta rejasi</h3>
+        {dietPlan ? (
+          <Button variant="outline" onClick={onRemove}>
+            <X size={16} className="inline mr-2" />
+            Dieta rejasini olib tashlash
+          </Button>
+        ) : (
+          <Button onClick={onOpenSelector}>
+            <Plus size={16} className="inline mr-2" />
+            Dieta rejasi tanlash
+          </Button>
+        )}
+      </div>
       {dietPlan && (
         <>
           <Card>
